@@ -55,9 +55,10 @@ export function LoginForm({ initialError }: LoginFormProps) {
     );
   }
 
-  // DEBUG: midlertidig alltid synlig — sett tilbake til env-sjekk etter verifisering på Vercel.
-  // NEXT_PUBLIC_* leses inn ved build; mangler den i Production-build vises ikke knappene.
-  const showTestButtons = true;
+  const testNavLinkClass = cn(
+    buttonVariants({ variant: "outline", size: "sm" }),
+    "h-9 w-full justify-center border-brand-pine/20 text-xs text-brand-pine hover:bg-brand-cream/80"
+  );
 
   return (
     <>
@@ -121,46 +122,23 @@ export function LoginForm({ initialError }: LoginFormProps) {
       </form>
     </Card>
 
-    {showTestButtons ? (
-      <div className="mt-8 w-full space-y-4">
-        <div className="border-t border-neutral-200" aria-hidden />
-        <div>
-          <p className="text-xs font-medium text-amber-700/90">Kun for testing</p>
-          <h2 className="font-heading mt-1 text-sm font-semibold text-brand-pine">
-            Rask test-innlogging
-          </h2>
-          <div className="mt-3 flex flex-col gap-2">
-            <Link
-              href="/admin/dashboard"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-10 w-full justify-center border-brand-pine/20 text-brand-pine hover:bg-brand-cream/80"
-              )}
-            >
-              🏆 Admin
-            </Link>
-            <Link
-              href="/lag/dashboard"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-10 w-full justify-center border-brand-pine/20 text-brand-pine hover:bg-brand-cream/80"
-              )}
-            >
-              ⚽ Idrettslag
-            </Link>
-            <Link
-              href="/bedrift/dashboard"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-10 w-full justify-center border-brand-pine/20 text-brand-pine hover:bg-brand-cream/80"
-              )}
-            >
-              🏢 Bedrift
-            </Link>
-          </div>
-        </div>
+    <div className="mt-8 w-full space-y-3">
+      <div className="border-t border-neutral-200" aria-hidden />
+      <p className="text-center text-xs font-medium tracking-wide text-neutral-500">
+        ─── Rask test-navigasjon ───
+      </p>
+      <div className="flex flex-col gap-2">
+        <Link href="/lag/dashboard" className={testNavLinkClass}>
+          ⚽ Idrettslag
+        </Link>
+        <Link href="/bedrift/dashboard" className={testNavLinkClass}>
+          🏢 Bedrift
+        </Link>
+        <Link href="/admin/dashboard" className={testNavLinkClass}>
+          🏆 Admin
+        </Link>
       </div>
-    ) : null}
+    </div>
     </>
   );
 }
