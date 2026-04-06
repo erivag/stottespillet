@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { orderStatusNb, segmentLabel } from "@/lib/admin/labels";
+import { EMPTY_ADMIN_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { trpc } from "@/lib/trpc/react";
 
 const nok = new Intl.NumberFormat("nb-NO", {
@@ -31,16 +32,15 @@ export default function AdminDashboardPage() {
     return <AdminDashboardSkeleton />;
   }
 
-  if (isError || !data) {
-    return (
-      <p className="text-sm text-destructive">
-        Kunne ikke laste oversikten.
-      </p>
-    );
-  }
+  const d = data ?? EMPTY_ADMIN_DASHBOARD;
 
   return (
     <div className="flex flex-col gap-8">
+      {isError ? (
+        <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-xs text-neutral-500">
+          Data kunne ikke lastes akkurat nå. Tallene under kan være tomme.
+        </p>
+      ) : null}
       <div>
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-[var(--brand-pine)] sm:text-3xl">
           Oversikt
@@ -56,22 +56,22 @@ export default function AdminDashboardPage() {
       >
         <StatCard
           title="Registrerte lag"
-          value={String(data.organizationsCount)}
+          value={String(d.organizationsCount)}
           icon={Users}
         />
         <StatCard
           title="Registrerte bedrifter"
-          value={String(data.sponsorsCount)}
+          value={String(d.sponsorsCount)}
           icon={Building2}
         />
         <StatCard
           title="Sponsormidler formidlet"
-          value={nok.format(data.totalSponsoredOre / 100)}
+          value={nok.format(d.totalSponsoredOre / 100)}
           icon={Coins}
         />
         <StatCard
           title="Aktive spleiser"
-          value={String(data.activeSpleisesCount)}
+          value={String(d.activeSpleisesCount)}
           icon={Sparkles}
         />
       </section>
@@ -82,17 +82,17 @@ export default function AdminDashboardPage() {
       >
         <ActivityCard
           title="Nye lag (7 dager)"
-          value={String(data.newOrganizationsLast7Days)}
+          value={String(d.newOrganizationsLast7Days)}
           icon={Users}
         />
         <ActivityCard
           title="Sendte e-poster (7 dager)"
-          value={String(data.emailsSentLast7Days)}
+          value={String(d.emailsSentLast7Days)}
           icon={Mail}
         />
         <ActivityCard
           title="Ordrer til behandling"
-          value={String(data.ordersPendingTreatment)}
+          value={String(d.ordersPendingTreatment)}
           icon={Package}
         />
       </section>
@@ -105,7 +105,7 @@ export default function AdminDashboardPage() {
           >
             Siste registrerte lag
           </h3>
-          {data.recentOrganizations.length === 0 ? (
+          {d.recentOrganizations.length === 0 ? (
             <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
               <CardContent className="text-muted-foreground py-10 text-center text-sm">
                 Ingen lag registrert ennå.
@@ -128,7 +128,7 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.recentOrganizations.map((o) => (
+                  {d.recentOrganizations.map((o) => (
                     <tr
                       key={o.id}
                       className="border-b border-[var(--brand-pine)]/5 last:border-0"
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
           >
             Siste ordrer
           </h3>
-          {data.recentOrders.length === 0 ? (
+          {d.recentOrders.length === 0 ? (
             <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
               <CardContent className="text-muted-foreground py-10 text-center text-sm">
                 Ingen ordrer ennå.
@@ -183,7 +183,7 @@ export default function AdminDashboardPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.recentOrders.map((o) => (
+                  {d.recentOrders.map((o) => (
                     <tr
                       key={o.id}
                       className="border-b border-[var(--brand-pine)]/5 last:border-0"

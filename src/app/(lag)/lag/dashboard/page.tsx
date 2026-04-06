@@ -21,6 +21,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/react";
 
@@ -42,32 +43,27 @@ export default function LagDashboardPage() {
     return <DashboardSkeleton />;
   }
 
-  if (isError) {
-    return (
-      <div className="rounded-xl border border-destructive/30 bg-white p-6 text-sm text-destructive shadow-sm">
-        Noe gikk galt ved lasting av dashbordet. Prøv å oppdatere siden.
-      </div>
-    );
-  }
+  const d = data ?? EMPTY_LAG_DASHBOARD;
 
-  if (!data) {
-    return <DashboardSkeleton />;
-  }
-
-  const showEmptyApplications = data.activeApplications === 0;
+  const showEmptyApplications = d.activeApplications === 0;
 
   return (
     <div className="flex flex-col gap-8">
+      {isError ? (
+        <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-xs text-neutral-500">
+          Data kunne ikke lastes akkurat nå. Visningen under kan være tom.
+        </p>
+      ) : null}
       <Card className="border-[var(--brand-pine)]/12 bg-gradient-to-br from-[var(--brand-pine)] to-[var(--brand-pine-mid)] text-white shadow-md">
         <CardContent className="p-6 sm:p-8">
           <p className="text-sm font-medium text-[var(--brand-gold)]">
             Velkommen tilbake
           </p>
           <h1 className="font-heading mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">
-            {data.organizationName ?? "Ditt lag"}
+            {d.organizationName ?? "Ditt lag"}
           </h1>
           <p className="mt-2 max-w-xl text-sm text-white/80 sm:text-base">
-            {data.organizationName
+            {d.organizationName
               ? "Her ser du status for søknader, ordrer og svar fra sponsorer."
               : "Koble et lag til kontoen din ved å fullføre registrering og opprette en søknad."}
           </p>
@@ -101,25 +97,25 @@ export default function LagDashboardPage() {
         <StatCard
           title="Sponsormidler mottatt"
           description="Betalte sponsorater (totalt)"
-          value={nok.format(data.sponsorFundsOre / 100)}
+          value={nok.format(d.sponsorFundsOre / 100)}
           icon={Coins}
         />
         <StatCard
           title="Aktive søknader"
           description="Kampanjer med status aktiv"
-          value={String(data.activeApplications)}
+          value={String(d.activeApplications)}
           icon={ClipboardList}
         />
         <StatCard
           title="Produktordrer"
           description="Registrerte ordrelinjer"
-          value={String(data.productOrdersCount)}
+          value={String(d.productOrdersCount)}
           icon={Package}
         />
         <StatCard
           title="Uleste svar"
           description="Venter på deg (pending / betaling)"
-          value={String(data.unreadResponses)}
+          value={String(d.unreadResponses)}
           icon={Inbox}
         />
       </section>
@@ -154,7 +150,7 @@ export default function LagDashboardPage() {
         <h2 className="font-heading mb-3 text-lg font-semibold text-[var(--brand-pine)]">
           Siste aktivitet
         </h2>
-        {data.recentActivity.length === 0 ? (
+        {d.recentActivity.length === 0 ? (
           <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
             <CardContent className="text-muted-foreground py-10 text-center text-sm">
               Ingen aktivitet å vise ennå.
@@ -162,7 +158,7 @@ export default function LagDashboardPage() {
           </Card>
         ) : (
           <ul className="flex flex-col gap-2">
-            {data.recentActivity.map((a) => (
+            {d.recentActivity.map((a) => (
               <li key={a.id}>
                 <Card className="border-[var(--brand-pine)]/10 transition-shadow hover:shadow-md">
                   <CardContent className="flex flex-col gap-1 p-4 sm:flex-row sm:items-center sm:justify-between">

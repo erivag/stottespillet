@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { EMPTY_BEDRIFT_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/react";
 
@@ -48,33 +49,28 @@ export default function BedriftDashboardPage() {
     return <BedriftSkeleton />;
   }
 
-  if (isError) {
-    return (
-      <div className="rounded-xl border border-destructive/30 bg-white p-6 text-sm text-destructive shadow-sm">
-        Kunne ikke laste bedriftsdashbordet.
-      </div>
-    );
-  }
-
-  if (!data) {
-    return <BedriftSkeleton />;
-  }
+  const d = data ?? EMPTY_BEDRIFT_DASHBOARD;
 
   const hasBudget =
-    data.annualBudgetOre != null && data.annualBudgetOre > 0;
+    d.annualBudgetOre != null && d.annualBudgetOre > 0;
 
   return (
     <div className="flex flex-col gap-8">
+      {isError ? (
+        <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-xs text-neutral-500">
+          Data kunne ikke lastes akkurat nå. Visningen under kan være tom.
+        </p>
+      ) : null}
       <header className="space-y-1">
         <h1 className="font-heading text-2xl font-semibold tracking-tight text-[var(--brand-pine)] sm:text-3xl">
           Bedriftsdashboard
         </h1>
         <p className="text-muted-foreground text-base sm:text-lg">
-          {data.companyName ? (
+          {d.companyName ? (
             <>
               Innlogget som{" "}
               <span className="font-medium text-[var(--brand-pine)]">
-                {data.companyName}
+                {d.companyName}
               </span>
             </>
           ) : (
@@ -118,8 +114,8 @@ export default function BedriftDashboardPage() {
             </div>
           ) : (
             <BudgetRing
-              usedOre={data.usedBudgetOre}
-              totalOre={data.annualBudgetOre}
+              usedOre={d.usedBudgetOre}
+              totalOre={d.annualBudgetOre}
             />
           )}
         </CardContent>
@@ -132,19 +128,19 @@ export default function BedriftDashboardPage() {
         <StatCard
           title="Nye forespørsler"
           description="Sponsorater som venter på svar"
-          value={String(data.newRequestsCount)}
+          value={String(d.newRequestsCount)}
           icon={Inbox}
         />
         <StatCard
           title="Aktive sponsorat"
           description="I betaling eller betalt"
-          value={String(data.activeSponsoratsCount)}
+          value={String(d.activeSponsoratsCount)}
           icon={Sparkles}
         />
         <StatCard
           title="Lag støttet totalt"
           description="Unike lag med minst ett betalt sponsorat"
-          value={String(data.supportedOrganizationsCount)}
+          value={String(d.supportedOrganizationsCount)}
           icon={Building2}
         />
       </section>
@@ -162,7 +158,7 @@ export default function BedriftDashboardPage() {
             Synlighetsrapport
           </Link>
         </div>
-        {data.pendingMatches.length === 0 ? (
+        {d.pendingMatches.length === 0 ? (
           <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
             <CardContent className="text-muted-foreground py-10 text-center text-sm">
               Ingen nye forespørsler.
@@ -170,7 +166,7 @@ export default function BedriftDashboardPage() {
           </Card>
         ) : (
           <ul className="flex flex-col gap-3">
-            {data.pendingMatches.map((m) => (
+            {d.pendingMatches.map((m) => (
               <li key={m.id}>
                 <Card className="border-[var(--brand-pine)]/10 transition-shadow hover:shadow-md">
                   <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
@@ -196,11 +192,9 @@ export default function BedriftDashboardPage() {
                               matchId: m.id,
                               action: "decline",
                             });
-                          } catch (e) {
+                          } catch {
                             setErrorMsg(
-                              e instanceof Error
-                                ? e.message
-                                : "Kunne ikke avslå."
+                              "Kunne ikke avslå forespørselen. Prøv igjen senere."
                             );
                           }
                         }}
@@ -218,11 +212,9 @@ export default function BedriftDashboardPage() {
                               matchId: m.id,
                               action: "approve",
                             });
-                          } catch (e) {
+                          } catch {
                             setErrorMsg(
-                              e instanceof Error
-                                ? e.message
-                                : "Kunne ikke godkjenne."
+                              "Kunne ikke godkjenne forespørselen. Prøv igjen senere."
                             );
                           }
                         }}

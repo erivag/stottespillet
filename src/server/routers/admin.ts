@@ -3,6 +3,7 @@ import { and, desc, eq, ilike, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { isAdminUserId } from "@/lib/admin";
+import { EMPTY_ADMIN_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
 import {
   adminProductFormSchema,
@@ -35,6 +36,7 @@ const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
 
 export const adminRouter = router({
   dashboard: adminProcedure.query(async () => {
+    try {
     const [orgCountRow] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(organizations);
@@ -122,6 +124,10 @@ export const adminRouter = router({
         productLabel: null as string | null,
       })),
     };
+    } catch (err) {
+      console.error("[admin.dashboard] database error", err);
+      return EMPTY_ADMIN_DASHBOARD;
+    }
   }),
 
   listOrganizations: adminProcedure

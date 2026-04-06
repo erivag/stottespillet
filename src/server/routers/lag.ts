@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { SPLEIS_TYPES } from "@/lib/catalog/spleis-types";
+import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
 import { sendAdminOrderNotification } from "@/lib/resend/send-admin-order-notification";
 import { supplierDisplayLine } from "@/lib/shop/catalog-labels";
@@ -32,6 +33,7 @@ export const lagRouter = router({
   dashboard: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
 
+    try {
     const [org] = await db
       .select({
         id: organizations.id,
@@ -202,6 +204,10 @@ export const lagRouter = router({
       unreadResponses: unreadRow?.count ?? 0,
       recentActivity,
     };
+    } catch (err) {
+      console.error("[lag.dashboard] database error", err);
+      return EMPTY_LAG_DASHBOARD;
+    }
   }),
 
   myCampaigns: publicProcedure.query(async ({ ctx }) => {

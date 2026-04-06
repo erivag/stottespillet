@@ -2,6 +2,7 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { EMPTY_BEDRIFT_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
 import { campaigns, matches, sponsors } from "@db/schema";
 
@@ -11,6 +12,7 @@ export const bedriftRouter = router({
   dashboard: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
 
+    try {
     const [sponsor] = await db
       .select({
         id: sponsors.id,
@@ -106,6 +108,10 @@ export const bedriftRouter = router({
         updatedAt: r.updatedAt,
       })),
     };
+    } catch (err) {
+      console.error("[bedrift.dashboard] database error", err);
+      return EMPTY_BEDRIFT_DASHBOARD;
+    }
   }),
 
   respondToMatch: protectedProcedure
