@@ -55,9 +55,9 @@ export function LoginForm({ initialError }: LoginFormProps) {
     );
   }
 
-  const showTestButtons =
-    process.env.NODE_ENV === "development" ||
-    process.env.NEXT_PUBLIC_SHOW_TEST_BUTTONS === "true";
+  // DEBUG: midlertidig alltid synlig — sett tilbake til env-sjekk etter verifisering på Vercel.
+  // NEXT_PUBLIC_* leses inn ved build; mangler den i Production-build vises ikke knappene.
+  const showTestButtons = true;
 
   return (
     <>
