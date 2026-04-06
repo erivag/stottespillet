@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 
 type LoginFormProps = {
@@ -55,13 +54,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
     );
   }
 
-  const testNavLinkClass = cn(
-    buttonVariants({ variant: "outline", size: "sm" }),
-    "h-9 w-full justify-center border-brand-pine/20 text-xs text-brand-pine hover:bg-brand-cream/80"
-  );
-
   return (
-    <>
     <Card className="border border-brand-pine/10 bg-white shadow-lg shadow-brand-pine/5">
       <CardHeader className="space-y-1 pb-2">
         <CardTitle className="font-heading text-2xl font-semibold tracking-tight text-brand-pine">
@@ -121,24 +114,5 @@ export function LoginForm({ initialError }: LoginFormProps) {
         </CardFooter>
       </form>
     </Card>
-
-    <div className="mt-8 w-full space-y-3">
-      <div className="border-t border-neutral-200" aria-hidden />
-      <p className="text-center text-xs font-medium tracking-wide text-neutral-500">
-        ─── Rask test-navigasjon ───
-      </p>
-      <div className="flex flex-col gap-2">
-        <Link href="/lag/dashboard" className={testNavLinkClass}>
-          ⚽ Idrettslag
-        </Link>
-        <Link href="/bedrift/dashboard" className={testNavLinkClass}>
-          🏢 Bedrift
-        </Link>
-        <Link href="/admin/dashboard" className={testNavLinkClass}>
-          🏆 Admin
-        </Link>
-      </div>
-    </div>
-    </>
   );
 }
