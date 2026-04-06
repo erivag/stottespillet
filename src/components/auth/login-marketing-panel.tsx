@@ -23,7 +23,7 @@ export function LoginMarketingPanel() {
           </h1>
           <p className="auth-animate-in auth-animate-delay-2 mt-4 max-w-md text-base leading-relaxed text-white/75 sm:text-lg">
             Koble laget med lokale bedrifter — fra refleksvester til badstue og
-            toalettbygg.
+            gapahuk.
           </p>
           <SuccessTicker />
         </div>
