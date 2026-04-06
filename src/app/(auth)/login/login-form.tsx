@@ -55,7 +55,9 @@ export function LoginForm({ initialError }: LoginFormProps) {
     );
   }
 
-  const isDev = process.env.NODE_ENV === "development";
+  const showTestButtons =
+    process.env.NODE_ENV === "development" ||
+    process.env.NEXT_PUBLIC_SHOW_TEST_BUTTONS === "true";
 
   return (
     <>
@@ -119,7 +121,7 @@ export function LoginForm({ initialError }: LoginFormProps) {
       </form>
     </Card>
 
-    {isDev ? (
+    {showTestButtons ? (
       <div className="mt-8 w-full space-y-4">
         <div className="border-t border-neutral-200" aria-hidden />
         <div>
