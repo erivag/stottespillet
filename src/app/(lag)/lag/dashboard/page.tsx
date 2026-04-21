@@ -23,7 +23,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
+import {
+  EMPTY_LAG_DASHBOARD,
+  type LagDashboardData,
+} from "@/lib/dashboard-fallbacks";
 import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/react";
 
@@ -42,10 +45,11 @@ export default function LagDashboardPage() {
   const router = useRouter();
   const [profilLagret, setProfilLagret] = useState(false);
 
-  const { data, isLoading, isError } = trpc.lag.dashboard.useQuery(undefined, {
-    retry: false,
-    throwOnError: false,
-  });
+  const { data, isLoading, isError, refetch, isFetching } =
+    trpc.lag.dashboard.useQuery(undefined, {
+      retry: false,
+      throwOnError: false,
+    });
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -59,31 +63,44 @@ export default function LagDashboardPage() {
     return <DashboardSkeleton />;
   }
 
-  if (isError) {
-    return (
-      <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
-        <CardHeader>
-          <CardTitle className="text-base text-[var(--brand-pine)]">
-            Dashboard
-          </CardTitle>
-          <CardDescription>
-            Vi fikk ikke lastet data akkurat nå. Prøv igjen om litt.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-sm text-neutral-600">
-          Dashbordet viser foreløpig ingen data.
-        </CardContent>
-      </Card>
-    );
-  }
-
-  const d = data ?? EMPTY_LAG_DASHBOARD;
+  const d: LagDashboardData = data ?? EMPTY_LAG_DASHBOARD;
+  const fetchFailed = isError;
+  const partialServerFallback = d.loadFailed === true;
+  const showDataWarning = fetchFailed || partialServerFallback;
 
   const showEmptyApplications = d.activeApplications === 0;
-  const needsProfile = d.organizationName === null;
+  const needsProfile =
+    !fetchFailed &&
+    d.organizationName === null &&
+    d.loadFailed !== true;
 
   return (
     <div className="flex flex-col gap-8">
+      {showDataWarning ? (
+        <Card className="border-amber-200/80 bg-amber-50/90">
+          <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-neutral-800">
+              {fetchFailed
+                ? "Vi fikk ikke hentet dashboard-data akkurat nå. Du kan fortsatt bruke menyen under; prøv «Last på nytt»."
+                : "Noen tall kunne ikke lastes fra databasen. Resten av siden vises med det vi fikk tak i."}
+            </p>
+            {fetchFailed ? (
+              <button
+                type="button"
+                onClick={() => void refetch()}
+                disabled={isFetching}
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "shrink-0 border-[var(--brand-pine)]/30 text-[var(--brand-pine)]"
+                )}
+              >
+                {isFetching ? "Laster …" : "Last på nytt"}
+              </button>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {profilLagret ? (
         <p
           className="rounded-lg border border-[var(--brand-pine)]/20 bg-[var(--brand-pine)]/5 px-4 py-3 text-sm font-medium text-[var(--brand-pine)]"

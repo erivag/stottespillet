@@ -40,6 +40,8 @@ export type LagDashboardData = {
     detail: string;
     occurredAt: string;
   }[];
+  /** True when DB failed after we confirmed the user; do not treat as "no organization". */
+  loadFailed?: boolean;
 };
 
 export type BedriftDashboardData = {

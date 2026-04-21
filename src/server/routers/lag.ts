@@ -34,32 +34,33 @@ export const lagRouter = router({
     const userId = ctx.user.id;
 
     try {
-    const [org] = await db
-      .select({
-        id: organizations.id,
-        name: organizations.name,
-      })
-      .from(organizations)
-      .where(eq(organizations.userId, userId))
-      .limit(1);
+      const [org] = await db
+        .select({
+          id: organizations.id,
+          name: organizations.name,
+        })
+        .from(organizations)
+        .where(eq(organizations.userId, userId))
+        .limit(1);
 
-    if (!org) {
-      return {
-        organizationName: null as string | null,
-        sponsorFundsOre: 0,
-        activeApplications: 0,
-        productOrdersCount: 0,
-        unreadResponses: 0,
-        recentActivity: [] as {
-          id: string;
-          kind: ActivityKind;
-          title: string;
-          detail: string;
-          occurredAt: string;
-        }[],
-      };
-    }
+      if (!org) {
+        return {
+          organizationName: null as string | null,
+          sponsorFundsOre: 0,
+          activeApplications: 0,
+          productOrdersCount: 0,
+          unreadResponses: 0,
+          recentActivity: [] as {
+            id: string;
+            kind: ActivityKind;
+            title: string;
+            detail: string;
+            occurredAt: string;
+          }[],
+        };
+      }
 
+      try {
     const [paidRow] = await db
       .select({
         total: sql<number>`coalesce(sum(${matches.amountOre}), 0)::bigint`,
@@ -196,17 +197,38 @@ export const lagRouter = router({
 
     const recentActivity = merged.slice(0, 10);
 
-    return {
-      organizationName: org.name,
-      sponsorFundsOre: Number(paidRow?.total ?? 0),
-      activeApplications: activeRow?.count ?? 0,
-      productOrdersCount: ordersRow?.count ?? 0,
-      unreadResponses: unreadRow?.count ?? 0,
-      recentActivity,
-    };
+        return {
+          organizationName: org.name,
+          sponsorFundsOre: Number(paidRow?.total ?? 0),
+          activeApplications: activeRow?.count ?? 0,
+          productOrdersCount: ordersRow?.count ?? 0,
+          unreadResponses: unreadRow?.count ?? 0,
+          recentActivity,
+        };
+      } catch (innerErr) {
+        console.error(
+          "[lag.dashboard] aggregate/activity query failed",
+          innerErr
+        );
+        return {
+          organizationName: org.name,
+          sponsorFundsOre: 0,
+          activeApplications: 0,
+          productOrdersCount: 0,
+          unreadResponses: 0,
+          recentActivity: [] as {
+            id: string;
+            kind: ActivityKind;
+            title: string;
+            detail: string;
+            occurredAt: string;
+          }[],
+          loadFailed: true as const,
+        };
+      }
     } catch (err) {
       console.error("[lag.dashboard] database error", err);
-      return EMPTY_LAG_DASHBOARD;
+      return { ...EMPTY_LAG_DASHBOARD, loadFailed: true as const };
     }
   }),
 
