@@ -471,7 +471,7 @@ export const lagRouter = router({
     }
   }),
 
-  /** Poststed fra postnummer (Bring åpent API). */
+  /** Poststed fra postnummer (Bring shippingguide API). */
   postalCodeLookup: protectedProcedure
     .input(z.object({ postalCode: z.string().regex(/^\d{4}$/) }))
     .mutation(async ({ input }) => {
@@ -479,6 +479,7 @@ export const lagRouter = router({
         const url = new URL(
           "https://api.bring.com/shippingguide/api/postalCode.json"
         );
+        url.searchParams.set("clientUrl", "støttespillet.no");
         url.searchParams.set("pnr", input.postalCode);
         url.searchParams.set("countryCode", "NO");
         const res = await fetch(url.toString());
@@ -486,17 +487,28 @@ export const lagRouter = router({
           return { city: null as string | null };
         }
         const json = (await res.json()) as {
-          postalCodes?: { city?: string }[];
+          result?: string;
+          valid?: boolean;
         };
-        const raw = json.postalCodes?.[0]?.city;
-        if (!raw || typeof raw !== "string") {
+        if (
+          json.valid !== true ||
+          typeof json.result !== "string" ||
+          json.result.trim().length === 0
+        ) {
           return { city: null as string | null };
         }
+        const raw = json.result.trim();
         const city = raw
-          .toLowerCase()
-          .split(" ")
-          .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
-          .join(" ");
+          .split("-")
+          .map((segment) =>
+            segment
+              .split(/\s+/)
+              .map((w) =>
+                w.length === 0 ? w : w.charAt(0) + w.slice(1).toLowerCase()
+              )
+              .join(" ")
+          )
+          .join("-");
         return { city };
       } catch (e) {
         console.error("[lag.postalCodeLookup]", e);

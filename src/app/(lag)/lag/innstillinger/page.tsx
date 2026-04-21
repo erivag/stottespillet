@@ -21,6 +21,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc/react";
 
+/** Bring returnerer ofte STORE BOKSTAVER; gjør lesbar tittel. */
+function formatBringPoststed(raw: string): string {
+  return raw
+    .split("-")
+    .map((segment) =>
+      segment
+        .split(/\s+/)
+        .map((w) =>
+          w.length === 0 ? w : w.charAt(0) + w.slice(1).toLowerCase()
+        )
+        .join(" ")
+    )
+    .join("-");
+}
+
 const ORG_TYPES = [
   { value: "", label: "Velg type …" },
   { value: "golfklubb", label: "Golfklubb" },
@@ -102,8 +117,7 @@ function LagInnstillingerInner() {
     },
   });
 
-  const postalLookup = trpc.lag.postalCodeLookup.useMutation();
-  const lookupPostal = postalLookup.mutate;
+  const [poststedLoading, setPoststedLoading] = useState(false);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -124,20 +138,36 @@ function LagInnstillingerInner() {
     }
   }, [router]);
 
-  useEffect(() => {
-    if (!/^\d{4}$/.test(postalCode)) return;
-    const handle = window.setTimeout(() => {
-      lookupPostal(
-        { postalCode },
-        {
-          onSuccess: (r) => {
-            if (r.city) setCity(r.city);
-          },
-        }
+  async function handlePostalBlur() {
+    const pc = postalCode.replace(/\D/g, "").slice(0, 4);
+    if (pc.length !== 4) return;
+    setPoststedLoading(true);
+    try {
+      const url = new URL(
+        "https://api.bring.com/shippingguide/api/postalCode.json"
       );
-    }, 450);
-    return () => window.clearTimeout(handle);
-  }, [postalCode, lookupPostal]);
+      url.searchParams.set("clientUrl", "støttespillet.no");
+      url.searchParams.set("pnr", pc);
+      url.searchParams.set("countryCode", "NO");
+      const res = await fetch(url.toString());
+      if (!res.ok) return;
+      const json = (await res.json()) as {
+        result?: string;
+        valid?: boolean;
+      };
+      if (
+        json.valid === true &&
+        typeof json.result === "string" &&
+        json.result.trim().length > 0
+      ) {
+        setCity(formatBringPoststed(json.result.trim()));
+      }
+    } catch (err) {
+      console.error("[lag/innstillinger] Bring poststed", err);
+    } finally {
+      setPoststedLoading(false);
+    }
+  }
 
   useEffect(() => {
     if (!data) return;
@@ -326,16 +356,18 @@ function LagInnstillingerInner() {
                 onChange={(e) =>
                   setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 4))
                 }
+                onBlur={() => void handlePostalBlur()}
                 className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
                 placeholder="0000"
                 aria-describedby="org-postal-hint"
               />
               <p id="org-postal-hint" className="text-xs text-neutral-500">
-                Fire siffer — brukes blant annet ved søk mot Brønnøysund.
+                Fire siffer — tab ut av feltet for å hente poststed fra Bring.
+                Brukes også ved søk mot Brønnøysund.
               </p>
-              {postalLookup.isPending ? (
+              {poststedLoading ? (
                 <p className="text-xs text-neutral-500" aria-live="polite">
-                  Slår opp poststed …
+                  Henter poststed …
                 </p>
               ) : null}
             </div>
