@@ -364,6 +364,8 @@ export const lagRouter = router({
         name: organizations.name,
         segment: organizations.segment,
         municipality: organizations.municipality,
+        contactName: organizations.contactName,
+        phone: organizations.phone,
       })
       .from(organizations)
       .where(eq(organizations.userId, ctx.user.id))
@@ -376,6 +378,8 @@ export const lagRouter = router({
             name: org.name,
             segment: org.segment,
             municipality: org.municipality,
+            contactName: org.contactName,
+            phone: org.phone,
           }
         : null,
     };
@@ -384,9 +388,20 @@ export const lagRouter = router({
   updateOrganization: protectedProcedure
     .input(
       z.object({
-        name: z.string().min(1, "Navn er påkrevd").max(200),
-        segment: z.string().max(100).optional().nullable(),
-        municipality: z.string().max(100).optional().nullable(),
+        name: z.string().min(1, "Lagnavn er påkrevd").max(200),
+        segment: z
+          .string()
+          .min(1, "Velg type")
+          .max(100),
+        municipality: z
+          .string()
+          .min(1, "Kommune er påkrevd")
+          .max(100),
+        contactName: z
+          .string()
+          .min(1, "Kontaktperson er påkrevd")
+          .max(200),
+        phone: z.string().max(50).optional().nullable(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -397,12 +412,11 @@ export const lagRouter = router({
         .where(eq(organizations.userId, ctx.user.id))
         .limit(1);
 
-      const segment =
-        input.segment?.trim() === "" ? null : input.segment?.trim() ?? null;
-      const municipality =
-        input.municipality?.trim() === ""
-          ? null
-          : input.municipality?.trim() ?? null;
+      const segment = input.segment.trim();
+      const municipality = input.municipality.trim();
+      const contactName = input.contactName.trim();
+      const phoneRaw = input.phone?.trim() ?? "";
+      const phone = phoneRaw === "" ? null : phoneRaw;
 
       if (existing) {
         await db
@@ -411,6 +425,8 @@ export const lagRouter = router({
             name: input.name.trim(),
             segment,
             municipality,
+            contactName,
+            phone,
             updatedAt: now,
           })
           .where(eq(organizations.id, existing.id));
@@ -420,6 +436,8 @@ export const lagRouter = router({
           name: input.name.trim(),
           segment,
           municipality,
+          contactName,
+          phone,
         });
       }
 

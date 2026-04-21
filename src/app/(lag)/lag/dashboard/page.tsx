@@ -1,7 +1,9 @@
 "use client";
 
 import type { ComponentType } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ClipboardList,
   Coins,
@@ -37,10 +39,21 @@ const dtf = new Intl.DateTimeFormat("nb-NO", {
 });
 
 export default function LagDashboardPage() {
+  const router = useRouter();
+  const [profilLagret, setProfilLagret] = useState(false);
+
   const { data, isLoading, isError } = trpc.lag.dashboard.useQuery(undefined, {
     retry: false,
     throwOnError: false,
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("profilLagret") !== "1") return;
+    setProfilLagret(true);
+    router.replace("/lag/dashboard", { scroll: false });
+  }, [router]);
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -67,9 +80,43 @@ export default function LagDashboardPage() {
   const d = data ?? EMPTY_LAG_DASHBOARD;
 
   const showEmptyApplications = d.activeApplications === 0;
+  const needsProfile = d.organizationName === null;
 
   return (
     <div className="flex flex-col gap-8">
+      {profilLagret ? (
+        <p
+          className="rounded-lg border border-[var(--brand-pine)]/20 bg-[var(--brand-pine)]/5 px-4 py-3 text-sm font-medium text-[var(--brand-pine)]"
+          role="status"
+        >
+          Profil lagret!
+        </p>
+      ) : null}
+
+      {needsProfile ? (
+        <Card className="border-[var(--brand-gold)]/35 bg-gradient-to-br from-amber-50 to-white shadow-sm">
+          <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+            <div className="min-w-0 space-y-1">
+              <p className="font-heading text-lg font-semibold text-[var(--brand-pine)]">
+                Velkommen! Fullfør profilen din
+              </p>
+              <p className="text-sm text-neutral-600">
+                Legg til lagnavn og kommune for å komme i gang.
+              </p>
+            </div>
+            <Link
+              href="/lag/innstillinger"
+              className={cn(
+                buttonVariants(),
+                "shrink-0 bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
+              )}
+            >
+              Fullfør profil →
+            </Link>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Card className="border-[var(--brand-pine)]/12 bg-gradient-to-br from-[var(--brand-pine)] to-[var(--brand-pine-mid)] text-white shadow-md">
         <CardContent className="p-6 sm:p-8">
           <p className="text-sm font-medium text-[var(--brand-gold)]">

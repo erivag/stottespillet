@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,23 +18,22 @@ import { trpc } from "@/lib/trpc/react";
 
 const ORG_TYPES = [
   { value: "", label: "Velg type …" },
-  { value: "idrettslag", label: "Idrettslag" },
   { value: "golfklubb", label: "Golfklubb" },
+  { value: "idrettslag", label: "Idrettslag" },
   { value: "17mai", label: "17. mai-komité" },
   { value: "barnehage", label: "Barnehage" },
   { value: "annet", label: "Annet" },
 ] as const;
 
 export default function LagInnstillingerPage() {
+  const router = useRouter();
   const utils = trpc.useUtils();
   const { data, isLoading, isError } = trpc.lag.organizationSettings.useQuery();
-  const [showSaved, setShowSaved] = useState(false);
   const updateOrg = trpc.lag.updateOrganization.useMutation({
-    onSuccess: () => {
-      void utils.lag.organizationSettings.invalidate();
-      void utils.lag.dashboard.invalidate();
-      setShowSaved(true);
-      window.setTimeout(() => setShowSaved(false), 2800);
+    onSuccess: async () => {
+      await utils.lag.organizationSettings.invalidate();
+      await utils.lag.dashboard.invalidate();
+      router.push("/lag/dashboard?profilLagret=1");
     },
   });
 
@@ -41,6 +41,8 @@ export default function LagInnstillingerPage() {
   const [email, setEmail] = useState("");
   const [municipality, setMunicipality] = useState("");
   const [segment, setSegment] = useState("");
+  const [contactName, setContactName] = useState("");
+  const [phone, setPhone] = useState("");
 
   useEffect(() => {
     if (!data) return;
@@ -49,10 +51,14 @@ export default function LagInnstillingerPage() {
       setName(data.organization.name);
       setMunicipality(data.organization.municipality ?? "");
       setSegment(data.organization.segment ?? "");
+      setContactName(data.organization.contactName ?? "");
+      setPhone(data.organization.phone ?? "");
     } else {
       setName("");
       setMunicipality("");
       setSegment("");
+      setContactName("");
+      setPhone("");
     }
   }, [data]);
 
@@ -77,8 +83,10 @@ export default function LagInnstillingerPage() {
     e.preventDefault();
     await updateOrg.mutateAsync({
       name: name.trim(),
-      segment: segment === "" ? null : segment.trim(),
-      municipality: municipality.trim() || null,
+      segment: segment.trim(),
+      municipality: municipality.trim(),
+      contactName: contactName.trim(),
+      phone: phone.trim() === "" ? null : phone.trim(),
     });
   }
 
@@ -104,7 +112,7 @@ export default function LagInnstillingerPage() {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="org-name" className="text-[var(--brand-pine)]">
-                Lagets navn
+                Lagnavn
               </Label>
               <Input
                 id="org-name"
@@ -132,20 +140,6 @@ export default function LagInnstillingerPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="org-municipality" className="text-[var(--brand-pine)]">
-                Kommune
-              </Label>
-              <Input
-                id="org-municipality"
-                value={municipality}
-                onChange={(e) => setMunicipality(e.target.value)}
-                maxLength={100}
-                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
-                placeholder="F.eks. Osterøy"
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="org-type" className="text-[var(--brand-pine)]">
                 Type
               </Label>
@@ -153,6 +147,7 @@ export default function LagInnstillingerPage() {
                 id="org-type"
                 value={segment}
                 onChange={(e) => setSegment(e.target.value)}
+                required
                 className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--brand-gold)]/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {ORG_TYPES.map((o) => (
@@ -163,11 +158,57 @@ export default function LagInnstillingerPage() {
               </select>
             </div>
 
-            {showSaved ? (
-              <p className="text-sm text-[var(--brand-pine-mid)]" role="status">
-                Lagret.
-              </p>
-            ) : null}
+            <div className="space-y-2">
+              <Label
+                htmlFor="org-municipality"
+                className="text-[var(--brand-pine)]"
+              >
+                Kommune
+              </Label>
+              <Input
+                id="org-municipality"
+                value={municipality}
+                onChange={(e) => setMunicipality(e.target.value)}
+                required
+                maxLength={100}
+                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
+                placeholder="F.eks. Osterøy"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="org-contact"
+                className="text-[var(--brand-pine)]"
+              >
+                Kontaktperson
+              </Label>
+              <Input
+                id="org-contact"
+                value={contactName}
+                onChange={(e) => setContactName(e.target.value)}
+                required
+                maxLength={200}
+                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
+                placeholder="Navn på kontaktperson"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="org-phone" className="text-[var(--brand-pine)]">
+                Telefon
+              </Label>
+              <Input
+                id="org-phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                maxLength={50}
+                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
+                placeholder="Valgfritt"
+              />
+            </div>
+
             {updateOrg.error ? (
               <p className="text-sm text-destructive" role="alert">
                 {updateOrg.error.message}

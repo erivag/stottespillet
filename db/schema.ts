@@ -23,6 +23,8 @@ export const organizations = pgTable(
     segment: text("segment"),
     /** Kommune (valgfritt) */
     municipality: text("municipality"),
+    contactName: text("contact_name"),
+    phone: text("phone"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
