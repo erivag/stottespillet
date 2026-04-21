@@ -28,12 +28,13 @@ const ORG_TYPES = [
 export default function LagInnstillingerPage() {
   const router = useRouter();
   const utils = trpc.useUtils();
+  const [showProfileHint, setShowProfileHint] = useState(false);
   const { data, isLoading, isError } = trpc.lag.organizationSettings.useQuery();
   const updateOrg = trpc.lag.updateOrganization.useMutation({
     onSuccess: async () => {
       await utils.lag.organizationSettings.invalidate();
       await utils.lag.dashboard.invalidate();
-      router.push("/lag/dashboard?profilLagret=1");
+      router.push("/lag/dashboard");
     },
   });
 
@@ -43,6 +44,15 @@ export default function LagInnstillingerPage() {
   const [segment, setSegment] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("manglerProfil") === "1") {
+      setShowProfileHint(true);
+      router.replace("/lag/innstillinger", { scroll: false });
+    }
+  }, [router]);
 
   useEffect(() => {
     if (!data) return;
@@ -92,6 +102,15 @@ export default function LagInnstillingerPage() {
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
+      {showProfileHint ? (
+        <p
+          className="rounded-lg border border-[var(--brand-gold)]/40 bg-amber-50 px-4 py-3 text-sm text-neutral-800"
+          role="status"
+        >
+          Fullfør profilen din for å komme i gang
+        </p>
+      ) : null}
+
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight text-[var(--brand-pine)] sm:text-3xl">
           Innstillinger

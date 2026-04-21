@@ -34,12 +34,13 @@ export default async function DashboardPage() {
     .where(eq(sponsors.userId, user.id))
     .limit(1);
 
-  if (sponsor && !org) {
-    redirect("/bedrift/dashboard");
-  }
   if (org) {
     redirect("/lag/dashboard");
   }
 
-  redirect("/registrer");
+  if (sponsor) {
+    redirect("/bedrift/dashboard");
+  }
+
+  redirect("/lag/innstillinger?manglerProfil=1");
 }
