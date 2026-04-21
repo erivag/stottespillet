@@ -5,115 +5,9 @@ import { slugifyName } from "@/lib/slug";
 import { products } from "@db/schema";
 
 import { supplierDisplayLine } from "./catalog-labels";
+import { golfProductsConfig } from "./golf-products-config";
 
-export type GolfProductSeed = {
-  name: string;
-  emoji: string;
-  /** List price per dozen in øre, excluding Norwegian VAT (25%). */
-  priceOre: number;
-  supplier: string;
-  minQty: number;
-  deliveryDays: string;
-  logoTrykk: boolean;
-  category: string;
-  description?: string;
-};
-
-export const golfProducts: GolfProductSeed[] = [
-  {
-    name: "Vice Drive",
-    emoji: "⛳",
-    priceOre: 25500,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-    description: "Populært valg for turneringer",
-  },
-  {
-    name: "Vice Tour",
-    emoji: "⛳",
-    priceOre: 37800,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-  },
-  {
-    name: "Callaway Super Soft",
-    emoji: "⛳",
-    priceOre: 34300,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-  },
-  {
-    name: "Callaway Chrome Soft",
-    emoji: "⛳",
-    priceOre: 60700,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-  },
-  {
-    name: "Titleist True Feel",
-    emoji: "⛳",
-    priceOre: 29600,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-  },
-  {
-    name: "Titleist Velocity",
-    emoji: "⛳",
-    priceOre: 37000,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-  },
-  {
-    name: "Titleist Tour Soft",
-    emoji: "⛳",
-    priceOre: 40500,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-  },
-  {
-    name: "Titleist Pro V1x",
-    emoji: "⛳",
-    priceOre: 60700,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-    description: "Premium",
-  },
-  {
-    name: "Titleist Pro V1",
-    emoji: "⛳",
-    priceOre: 60700,
-    supplier: "Promo Nordic",
-    minQty: 6,
-    deliveryDays: "10-14 dager",
-    logoTrykk: true,
-    category: "Sportsutstyr",
-    description: "Premium",
-  },
-];
+export type { GolfProductConfig as GolfProductSeed } from "./golf-products-config";
 
 function categoryCode(label: string): string {
   if (label === "Sportsutstyr") return "sports_equipment";
@@ -139,10 +33,13 @@ export async function seedGolfProductsIfEmpty(): Promise<{
   const supplierKey = "promo_nordic" as const;
 
   await db.insert(products).values(
-    golfProducts.map((g) => ({
+    golfProductsConfig.map((g) => ({
       name: g.name,
       slug: slugifyName(g.name),
-      description: g.description?.trim() || null,
+      description:
+        "description" in g && typeof g.description === "string"
+          ? g.description.trim() || null
+          : null,
       emoji: g.emoji,
       imageStoragePath: null,
       category: categoryCode(g.category),
@@ -161,5 +58,5 @@ export async function seedGolfProductsIfEmpty(): Promise<{
     }))
   );
 
-  return { inserted: golfProducts.length, skipped: false };
+  return { inserted: golfProductsConfig.length, skipped: false };
 }

@@ -20,24 +20,17 @@ import {
   VAT_HINT_SHORT,
 } from "@/lib/pricing/norwegian-vat";
 
-import { golfProducts } from "@/lib/shop/seed-golf-products";
+import {
+  golfBallOptions,
+  golfProductsConfig,
+} from "@/lib/shop/golf-products-config";
 
 import { submitDirectOrder, type DirectOrderFormState } from "./actions";
 
-const BALL_OPTIONS = [
-  "Vice Drive",
-  "Vice Tour",
-  "Callaway Super Soft",
-  "Callaway Chrome Soft",
-  "Titleist True Feel",
-  "Titleist Velocity",
-  "Titleist Tour Soft",
-  "Titleist Pro V1x",
-  "Titleist Pro V1",
-] as const;
+const BALL_OPTIONS = golfBallOptions;
 
 const BALL_PRICES_KR_EX_VAT_PER_DUSIN = Object.fromEntries(
-  golfProducts.map((p) => [p.name, p.priceOre / 100])
+  golfProductsConfig.map((p) => [p.name, p.priceOre / 100])
 ) as Record<(typeof BALL_OPTIONS)[number], number>;
 
 const kr = new Intl.NumberFormat("nb-NO", {

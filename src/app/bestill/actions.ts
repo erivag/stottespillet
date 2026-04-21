@@ -8,23 +8,14 @@ import {
   mvaOreFromNetOre,
 } from "@/lib/pricing/norwegian-vat";
 import { sendAdminDirectOrderNotification } from "@/lib/resend/send-admin-direct-order-notification";
-import { golfProducts } from "@/lib/shop/seed-golf-products";
+import {
+  golfBallOptions,
+  golfProductsConfig,
+} from "@/lib/shop/golf-products-config";
 import { orders } from "@db/schema";
 
-const golfBallOptions = [
-  "Vice Drive",
-  "Vice Tour",
-  "Callaway Super Soft",
-  "Callaway Chrome Soft",
-  "Titleist True Feel",
-  "Titleist Velocity",
-  "Titleist Tour Soft",
-  "Titleist Pro V1x",
-  "Titleist Pro V1",
-] as const;
-
 const pricesKrPerDusinExVat = Object.fromEntries(
-  golfProducts.map((p) => [p.name, p.priceOre / 100])
+  golfProductsConfig.map((p) => [p.name, p.priceOre / 100])
 ) as Record<(typeof golfBallOptions)[number], number>;
 
 const schema = z.object({
