@@ -1,14 +1,9 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Building2,
-  Flag,
-  GraduationCap,
   MousePointerClick,
   Package,
   Sparkles,
-  Trees,
-  Trophy,
   FileText,
 } from "lucide-react";
 
@@ -20,74 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-
-/** Veiledende katalog (CLAUDE.md §3.2) */
-const SHOP_PRODUCTS = [
-  {
-    name: "Golfballer Titleist m/logo",
-    supplier: "Promo Nordic",
-    price: "fra kr 690 / 12 stk",
-  },
-  {
-    name: "Solbriller m/logo",
-    supplier: "Leverandør etter avtale",
-    price: "fra kr 129 / stk",
-  },
-  {
-    name: "17. mai-medaljer m/logo",
-    supplier: "Pokalbutikk",
-    price: "fra kr 12 / stk",
-  },
-  {
-    name: "Refleksvester m/logo",
-    supplier: "Grossist etter avtale",
-    price: "fra kr 89 / stk",
-  },
-  {
-    name: "T-skjorter m/logo",
-    supplier: "Better WorkWear",
-    price: "fra kr 189 / stk",
-  },
-  {
-    name: "Caps brodert m/logo",
-    supplier: "Better WorkWear",
-    price: "fra kr 149 / stk",
-  },
-  { name: "Pokaler", supplier: "Pokalbutikk", price: "fra kr 199 / stk" },
-  {
-    name: "Refleksbeger m/logo",
-    supplier: "Grossist etter avtale",
-    price: "fra kr 45 / stk",
-  },
-  {
-    name: "Ballonger m/trykk",
-    supplier: "Promo Nordic",
-    price: "fra kr 4 / stk",
-  },
-] as const;
-
-const SPLEIS_CARDS = [
-  {
-    title: "Badstue",
-    detail: "Utero Classic · flere sponsorer deler kostnaden",
-    hint: "Permanent logo på bygget",
-  },
-  {
-    title: "Gapahuk",
-    detail: "Samlingsplass med synlig sponsor på konstruksjonen",
-    hint: "Typisk 3–5 sponsorer",
-  },
-  {
-    title: "Starterbod",
-    detail: "Synlig på banen – hull 1 og 10",
-    hint: "Golf og arrangement",
-  },
-  {
-    title: "Toalettbygg",
-    detail: "Off-grid med QR og Vipps (flaggskip)",
-    hint: "Passiv inntekt til laget",
-  },
-] as const;
 
 const STEPS = [
   {
@@ -109,29 +36,6 @@ const STEPS = [
     icon: Package,
     title: "Produkt leveres – sponsor synes",
     detail: "Synlighet på det dere har avtalt.",
-  },
-] as const;
-
-const AUDIENCE = [
-  {
-    title: "Golfklubber",
-    text: "Utstyr, arrangement og uterom med sponsorlogo.",
-    icon: Trophy,
-  },
-  {
-    title: "Idrettslag",
-    text: "Drakter, cupreise og felles prosjekter.",
-    icon: Building2,
-  },
-  {
-    title: "17. mai-komiteer",
-    text: "Medaljer, ballonger og det dere trenger til dagen.",
-    icon: Flag,
-  },
-  {
-    title: "Barnehager",
-    text: "Refleksvester og trygg synlighet for barna.",
-    icon: GraduationCap,
   },
 ] as const;
 
@@ -185,17 +89,17 @@ export default function Home() {
           </p>
 
           <h1 className="auth-animate-in auth-animate-delay-1 font-heading max-w-3xl text-3xl font-semibold leading-[1.12] tracking-tight sm:text-5xl lg:text-[3.25rem] lg:leading-[1.08]">
-            Finn sponsorer til laget ditt{" "}
-            <span className="text-[#FFBE4A]">– på minutter</span>
+            Få sponset golfballene{" "}
+            <span className="text-[#FFBE4A]">til neste turnering</span>
           </h1>
           <p className="auth-animate-in auth-animate-delay-2 mt-5 max-w-xl text-base leading-relaxed text-white/80 sm:text-lg">
-            AI finner lokale bedrifter, skriver personlige e-poster og sender
-            dem for deg.
+            Vi finner lokale bedrifter, skriver e-posten og ordner leveransen.
+            Klubben gjør ingenting.
           </p>
 
           <div className="auth-animate-in auth-animate-delay-3 mt-10 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
             <Link href="/registrer" className={btnGold}>
-              Registrer laget gratis
+              Registrer klubben gratis →
               <ArrowRight className="size-4 shrink-0" aria-hidden />
             </Link>
             <Link href="/registrer" className={btnOutlineHero}>
@@ -243,123 +147,91 @@ export default function Home() {
         </ol>
       </section>
 
-      {/* ——— Spleis ——— */}
-      <section
-        className="border-y border-[#0A2E1A]/10 bg-white py-16 sm:py-20"
-        aria-labelledby="spleis-heading"
-      >
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2
-                id="spleis-heading"
-                className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
-              >
-                Spleis – flere bedrifter, ett mål
-              </h2>
-              <p className="mt-3 max-w-2xl text-neutral-600">
-                Når noe koster mer enn én sponsor vil ta alene, kan flere gå inn
-                sammen. Når målet er nått, settes prosjektet i gang — med tydelig
-                sponsor-synlighet på det som bygges eller kjøpes inn.
-              </p>
-            </div>
-            <div className="flex items-center gap-2 text-sm font-medium text-[#0A2E1A]">
-              <Trees className="size-5 text-[#FFBE4A]" aria-hidden />
-              UTEbygg-produkter blant annet
-            </div>
-          </div>
-          <ul className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {SPLEIS_CARDS.map((c) => (
-              <li key={c.title}>
-                <Card className="h-full border-[#0A2E1A]/10 bg-[#f7f5f0]/80 transition-shadow hover:shadow-md">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-lg text-[#0A2E1A]">
-                      {c.title}
-                    </CardTitle>
-                    <CardDescription className="text-sm text-neutral-600">
-                      {c.detail}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <p className="text-xs font-medium text-[#FFBE4A]">
-                      {c.hint}
-                    </p>
-                  </CardContent>
-                </Card>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* ——— For hvem ——— */}
-      <section
-        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20"
-        aria-labelledby="audience-heading"
-      >
-        <h2
-          id="audience-heading"
-          className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
-        >
-          For hvem?
-        </h2>
-        <ul className="mt-10 grid gap-5 sm:grid-cols-2">
-          {AUDIENCE.map(({ title, text, icon: Icon }) => (
-            <li key={title}>
-              <Card className="h-full border-[#0A2E1A]/10 transition-shadow hover:shadow-md">
-                <CardContent className="flex gap-4 p-5 sm:p-6">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#0A2E1A]/10 text-[#0A2E1A]">
-                    <Icon className="size-5" aria-hidden />
-                  </span>
-                  <div>
-                    <h3 className="font-heading text-lg font-semibold text-[#0A2E1A]">
-                      {title}
-                    </h3>
-                    <p className="mt-1 text-sm leading-relaxed text-neutral-600">
-                      {text}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* ——— Produkter (horisontal scroll) ——— */}
+      {/* ——— Produktet ——— */}
       <section
         className="border-t border-[#0A2E1A]/10 bg-white py-16 sm:py-20"
-        aria-labelledby="products-heading"
+        aria-labelledby="product-heading"
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <h2
-            id="products-heading"
+            id="product-heading"
             className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
           >
-            Produkter i giveaway-shop
+            Golfballer med sponsor-logo
           </h2>
-          <p className="mt-2 max-w-2xl text-sm text-neutral-600 sm:text-base">
-            Utvalgte produkttyper med sponsor-logo levert til laget — priser er
-            veiledende fra leverandør eller katalog.
-          </p>
-          <div className="mt-8 flex gap-4 overflow-x-auto pb-4 [-ms-overflow-style:none] [scrollbar-width:none] sm:-mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
-            {SHOP_PRODUCTS.map((p) => (
-              <Card
-                key={p.name}
-                className="w-[min(85vw,280px)] shrink-0 snap-start border-[#0A2E1A]/10 transition-transform hover:-translate-y-0.5 hover:shadow-md"
-              >
-                <CardContent className="flex h-full flex-col p-5">
-                  <h3 className="font-heading text-base font-semibold leading-snug text-[#0A2E1A]">
-                    {p.name}
-                  </h3>
-                  <p className="mt-2 text-xs text-neutral-500">{p.supplier}</p>
-                  <p className="mt-auto pt-4 text-sm font-medium tabular-nums text-[#FFBE4A]">
-                    {p.price}
+          <div className="mt-10">
+            <Card className="border-[#0A2E1A]/10 bg-[#f7f5f0]/70 shadow-sm">
+              <CardContent className="flex flex-col gap-6 p-6 sm:p-8">
+                <div className="flex items-start gap-4">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#0A2E1A] text-xl text-[#FFBE4A]">
+                    ⛳
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-heading text-xl font-semibold leading-tight text-[#0A2E1A]">
+                      Titleist golfballer m/logo
+                    </h3>
+                    <p className="mt-1 text-sm font-medium text-[#FFBE4A]">
+                      fra kr 690 per 12 stk
+                    </p>
+                  </div>
+                </div>
+
+                <ul className="grid gap-2 text-sm text-neutral-700 sm:grid-cols-2">
+                  <li>Sponsor betaler – klubben bestiller</li>
+                  <li>Leveringstid: 10-14 dager</li>
+                </ul>
+
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <Link href="/lag/shop" className={btnGold}>
+                    Bestill til neste turnering
+                    <ArrowRight className="size-4 shrink-0" aria-hidden />
+                  </Link>
+                  <p className="text-xs text-neutral-600">
+                    Krever innlogging.
                   </p>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        </div>
+      </section>
+
+      {/* ——— For bedrifter ——— */}
+      <section
+        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20"
+        aria-labelledby="for-bedrifter-heading"
+      >
+        <div className="grid gap-10 lg:grid-cols-2 lg:items-center">
+          <div>
+            <h2
+              id="for-bedrifter-heading"
+              className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
+            >
+              Er du lokal bedrift?
+            </h2>
+            <p className="mt-3 max-w-xl text-neutral-600">
+              Logo på golfballer brukt i turneringer hele sesongen. Synlig for
+              alle deltakere.
+            </p>
+          </div>
+
+          <Card className="border-[#0A2E1A]/10 bg-white shadow-sm">
+            <CardContent className="p-6 sm:p-8">
+              <ul className="space-y-3 text-sm text-neutral-700">
+                <li>✓ Logo på Titleist-baller</li>
+                <li>✓ Nevnt i sosiale medier</li>
+                <li>✓ Støtter lokalt idrettsliv</li>
+                <li>✓ Fra kr 690 per turnering</li>
+              </ul>
+              <Link
+                href="/registrer"
+                className={cn(btnGold, "mt-8 inline-flex w-full sm:w-auto")}
+              >
+                Bli sponsor →
+                <ArrowRight className="size-4 shrink-0" aria-hidden />
+              </Link>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -367,13 +239,14 @@ export default function Home() {
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20">
         <div className="rounded-3xl bg-[#0A2E1A] px-6 py-12 text-center text-white sm:px-12 sm:py-16">
           <h2 className="font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
-            Registrer laget – vi finner sponsorene
+            Klar for å prøve?
           </h2>
           <p className="mx-auto mt-3 max-w-lg text-sm text-white/75 sm:text-base">
-            Opprett konto med magisk lenke og kom i gang uten bindingstid.
+            Registrer klubben gratis. Vi tar kontakt og hjelper dere i gang med
+            første turnering.
           </p>
           <Link href="/registrer" className={cn(btnGold, "mt-8 inline-flex")}>
-            Kom i gang
+            Registrer klubben →
             <ArrowRight className="size-4 shrink-0" aria-hidden />
           </Link>
         </div>
