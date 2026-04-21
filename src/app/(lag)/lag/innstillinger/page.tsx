@@ -102,9 +102,15 @@ function LagInnstillingerInner() {
     },
   });
 
+  const postalLookup = trpc.lag.postalCodeLookup.useMutation();
+  const lookupPostal = postalLookup.mutate;
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [municipality, setMunicipality] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [city, setCity] = useState("");
+  const [orgNr, setOrgNr] = useState("");
   const [orgType, setOrgType] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
@@ -119,18 +125,43 @@ function LagInnstillingerInner() {
   }, [router]);
 
   useEffect(() => {
+    if (!/^\d{4}$/.test(postalCode)) return;
+    const handle = window.setTimeout(() => {
+      lookupPostal(
+        { postalCode },
+        {
+          onSuccess: (r) => {
+            if (r.city) setCity(r.city);
+          },
+        }
+      );
+    }, 450);
+    return () => window.clearTimeout(handle);
+  }, [postalCode, lookupPostal]);
+
+  useEffect(() => {
     if (!data) return;
     try {
       setEmail(data.email);
       if (data.organization) {
         setName(data.organization.name);
         setMunicipality(data.organization.municipality ?? "");
+        setPostalCode(
+          (data.organization.postalCode ?? "").replace(/\D/g, "").slice(0, 4)
+        );
+        setCity(data.organization.city ?? "");
+        setOrgNr(
+          (data.organization.orgNr ?? "").replace(/\D/g, "").slice(0, 9)
+        );
         setOrgType(data.organization.type ?? "");
         setContactName(data.organization.contactName ?? "");
         setPhone(data.organization.phone ?? "");
       } else {
         setName("");
         setMunicipality("");
+        setPostalCode("");
+        setCity("");
+        setOrgNr("");
         setOrgType("");
         setContactName("");
         setPhone("");
@@ -148,6 +179,9 @@ function LagInnstillingerInner() {
         name: name.trim(),
         type: orgType.trim(),
         municipality: municipality.trim(),
+        postalCode: postalCode.replace(/\D/g, "").slice(0, 4),
+        city: city.trim(),
+        orgNr: orgNr.replace(/\D/g, "").slice(0, 9) || null,
         contactName: contactName.trim(),
         phone: phone.trim() === "" ? null : phone.trim(),
       });
@@ -273,6 +307,72 @@ function LagInnstillingerInner() {
                 className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
                 placeholder="F.eks. Osterøy"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label
+                htmlFor="org-postal"
+                className="text-[var(--brand-pine)]"
+              >
+                Postnummer
+              </Label>
+              <Input
+                id="org-postal"
+                inputMode="numeric"
+                pattern="\d{4}"
+                maxLength={4}
+                required
+                value={postalCode}
+                onChange={(e) =>
+                  setPostalCode(e.target.value.replace(/\D/g, "").slice(0, 4))
+                }
+                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
+                placeholder="0000"
+                aria-describedby="org-postal-hint"
+              />
+              <p id="org-postal-hint" className="text-xs text-neutral-500">
+                Fire siffer — brukes blant annet ved søk mot Brønnøysund.
+              </p>
+              {postalLookup.isPending ? (
+                <p className="text-xs text-neutral-500" aria-live="polite">
+                  Slår opp poststed …
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="org-city" className="text-[var(--brand-pine)]">
+                Sted
+              </Label>
+              <Input
+                id="org-city"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                required
+                maxLength={120}
+                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
+                placeholder="Fylles inn automatisk ved kjent postnummer"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="org-nr" className="text-[var(--brand-pine)]">
+                Org.nummer
+              </Label>
+              <Input
+                id="org-nr"
+                inputMode="numeric"
+                maxLength={9}
+                value={orgNr}
+                onChange={(e) =>
+                  setOrgNr(e.target.value.replace(/\D/g, "").slice(0, 9))
+                }
+                className="border-[var(--brand-pine)]/15 focus-visible:ring-[var(--brand-gold)]/40"
+                placeholder="Valgfritt — 9 siffer"
+              />
+              <p className="text-xs text-neutral-500">
+                For å identifisere laget i Brønnøysundregisteret.
+              </p>
             </div>
 
             <div className="space-y-2">

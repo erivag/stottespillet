@@ -389,6 +389,9 @@ export const lagRouter = router({
           municipality: organizations.municipality,
           contactName: organizations.contactName,
           phone: organizations.phone,
+          postalCode: organizations.postalCode,
+          city: organizations.city,
+          orgNr: organizations.orgNr,
         })
         .from(organizations)
         .where(eq(organizations.userId, ctx.user.id))
@@ -403,6 +406,9 @@ export const lagRouter = router({
               municipality: org.municipality,
               contactName: org.contactName,
               phone: org.phone,
+              postalCode: org.postalCode,
+              city: org.city,
+              orgNr: org.orgNr,
             }
           : null,
       };
@@ -415,21 +421,70 @@ export const lagRouter = router({
     }
   }),
 
+  /** Poststed fra postnummer (Bring åpent API). */
+  postalCodeLookup: protectedProcedure
+    .input(z.object({ postalCode: z.string().regex(/^\d{4}$/) }))
+    .mutation(async ({ input }) => {
+      try {
+        const url = new URL(
+          "https://api.bring.com/shippingguide/api/postalCode.json"
+        );
+        url.searchParams.set("pnr", input.postalCode);
+        url.searchParams.set("countryCode", "NO");
+        const res = await fetch(url.toString());
+        if (!res.ok) {
+          return { city: null as string | null };
+        }
+        const json = (await res.json()) as {
+          postalCodes?: { city?: string }[];
+        };
+        const raw = json.postalCodes?.[0]?.city;
+        if (!raw || typeof raw !== "string") {
+          return { city: null as string | null };
+        }
+        const city = raw
+          .toLowerCase()
+          .split(" ")
+          .map((w) => (w.length > 0 ? w[0].toUpperCase() + w.slice(1) : w))
+          .join(" ");
+        return { city };
+      } catch (e) {
+        console.error("[lag.postalCodeLookup]", e);
+        return { city: null as string | null };
+      }
+    }),
+
   updateOrganization: protectedProcedure
     .input(
-      z.object({
-        name: z.string().min(1, "Lagnavn er påkrevd").max(200),
-        type: z.string().min(1, "Velg type").max(100),
-        municipality: z
-          .string()
-          .min(1, "Kommune er påkrevd")
-          .max(100),
-        contactName: z
-          .string()
-          .min(1, "Kontaktperson er påkrevd")
-          .max(200),
-        phone: z.string().max(50).optional().nullable(),
-      })
+      z
+        .object({
+          name: z.string().min(1, "Lagnavn er påkrevd").max(200),
+          type: z.string().min(1, "Velg type").max(100),
+          municipality: z
+            .string()
+            .min(1, "Kommune er påkrevd")
+            .max(100),
+          postalCode: z
+            .string()
+            .regex(/^\d{4}$/, "Postnummer må være 4 siffer"),
+          city: z.string().min(1, "Sted er påkrevd").max(120),
+          orgNr: z.string().max(20).optional().nullable(),
+          contactName: z
+            .string()
+            .min(1, "Kontaktperson er påkrevd")
+            .max(200),
+          phone: z.string().max(50).optional().nullable(),
+        })
+        .superRefine((data, ctx) => {
+          const o = data.orgNr?.trim() ?? "";
+          if (o !== "" && !/^\d{9}$/.test(o)) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Org.nummer må være nøyaktig 9 siffer",
+              path: ["orgNr"],
+            });
+          }
+        })
     )
     .mutation(async ({ ctx, input }) => {
       const now = new Date().toISOString();
@@ -441,6 +496,10 @@ export const lagRouter = router({
 
       const orgType = input.type.trim();
       const municipality = input.municipality.trim();
+      const postalCode = input.postalCode.trim();
+      const city = input.city.trim();
+      const orgNrRaw = input.orgNr?.trim() ?? "";
+      const orgNr = orgNrRaw === "" ? null : orgNrRaw;
       const contactName = input.contactName.trim();
       const phoneRaw = input.phone?.trim() ?? "";
       const phone = phoneRaw === "" ? null : phoneRaw;
@@ -452,6 +511,9 @@ export const lagRouter = router({
             name: input.name.trim(),
             type: orgType,
             municipality,
+            postalCode,
+            city,
+            orgNr,
             contactName,
             phone,
             updatedAt: now,
@@ -463,6 +525,9 @@ export const lagRouter = router({
           name: input.name.trim(),
           type: orgType,
           municipality,
+          postalCode,
+          city,
+          orgNr,
           contactName,
           phone,
         });

@@ -25,6 +25,9 @@ export const organizations = pgTable(
     municipality: text("municipality"),
     contactName: text("contact_name"),
     phone: text("phone"),
+    postalCode: text("postal_code"),
+    city: text("city"),
+    orgNr: text("org_nr"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
