@@ -3,10 +3,10 @@
 import type { inferRouterOutputs } from "@trpc/server";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import type { AppRouter } from "@/server/routers";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -21,6 +21,9 @@ import { cn } from "@/lib/utils";
 import { trpc } from "@/lib/trpc/react";
 
 type BrregRow = inferRouterOutputs<AppRouter>["lag"]["findSponsors"]["bedrifter"][number];
+
+type OutreachDraftRow =
+  inferRouterOutputs<AppRouter>["lag"]["generateOutreach"]["emails"][number];
 
 const PRICE_VICE_DRIVE_PER_DUSIN_KR = 319;
 
@@ -61,11 +64,17 @@ export default function LagKampanjeNyPage() {
     displayed: number;
   } | null>(null);
   const [selected, setSelected] = useState<Record<string, BrregRow>>({});
+  const [outreachRows, setOutreachRows] = useState<OutreachDraftRow[]>([]);
+  const [genTick, setGenTick] = useState(0);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const createDraft = trpc.lag.createCampaignDraft.useMutation();
   const findSponsors = trpc.lag.findSponsors.useMutation();
-  const submitOutreach = trpc.lag.submitCampaignOutreach.useMutation();
+  const generateOutreach = trpc.lag.generateOutreach.useMutation();
+  const saveOutreachDrafts = trpc.lag.saveOutreachDrafts.useMutation();
+  const regenerateOutreachEmail =
+    trpc.lag.regenerateOutreachEmail.useMutation();
 
   const isGolf = campaignType === "golfballer_logo";
 
@@ -83,6 +92,25 @@ export default function LagKampanjeNyPage() {
     () => Object.values(selected),
     [selected]
   );
+
+  useEffect(() => {
+    if (!generateOutreach.isPending) {
+      setGenTick(0);
+      return;
+    }
+    const id = setInterval(() => setGenTick((t) => t + 1), 400);
+    return () => clearInterval(id);
+  }, [generateOutreach.isPending]);
+
+  const genProgressLabel = useMemo(() => {
+    const y = selectedList.length;
+    if (y === 0) return "";
+    const estMsPer = 4500;
+    const fakeX = generateOutreach.isPending
+      ? Math.min(y, Math.max(1, Math.floor((genTick * 400) / estMsPer) + 1))
+      : y;
+    return `${fakeX} av ${y}`;
+  }, [generateOutreach.isPending, genTick, selectedList.length]);
 
   function onCampaignTypeChange(next: CampaignTypeValue) {
     setCampaignType(next);
@@ -184,7 +212,7 @@ export default function LagKampanjeNyPage() {
     }
   }
 
-  async function handleFinalSubmit() {
+  async function handleGoToStep3() {
     if (!campaignId) return;
     setFormError(null);
     if (selectedList.length < 5) {
@@ -195,10 +223,12 @@ export default function LagKampanjeNyPage() {
       setFormError("Maks 20 bedrifter.");
       return;
     }
+    setStep(3);
+    setOutreachRows([]);
     try {
-      await submitOutreach.mutateAsync({
+      const { emails } = await generateOutreach.mutateAsync({
         campaignId,
-        selections: selectedList.map((s) => ({
+        bedrifter: selectedList.map((s) => ({
           orgNr: s.orgNr,
           name: s.name,
           industry: s.industry,
@@ -210,12 +240,67 @@ export default function LagKampanjeNyPage() {
           employees: s.employees,
         })),
       });
+      setOutreachRows(emails);
+    } catch (err) {
+      setStep(2);
+      setFormError(
+        err instanceof Error ? err.message : "Kunne ikke generere e-poster."
+      );
+    }
+  }
+
+  async function handleSaveDrafts() {
+    if (!campaignId || outreachRows.length === 0) return;
+    setFormError(null);
+    try {
+      await saveOutreachDrafts.mutateAsync({
+        campaignId,
+        rows: outreachRows.map((r) => ({
+          id: r.id,
+          body: r.body,
+          toEmail: r.toEmail,
+          subject: r.subject,
+        })),
+      });
       router.push("/lag/kampanje");
     } catch (err) {
       setFormError(
         err instanceof Error ? err.message : "Kunne ikke lagre utkast."
       );
     }
+  }
+
+  async function handleRegenerate(row: OutreachDraftRow) {
+    if (!campaignId) return;
+    setFormError(null);
+    setRegeneratingId(row.id);
+    try {
+      const res = await regenerateOutreachEmail.mutateAsync({
+        campaignId,
+        outreachEmailId: row.id,
+        industry: row.industry,
+      });
+      setOutreachRows((prev) =>
+        prev.map((r) =>
+          r.id === row.id ? { ...r, body: res.body, subject: res.subject } : r
+        )
+      );
+    } catch (err) {
+      setFormError(
+        err instanceof Error ? err.message : "Kunne ikke regenerere e-post."
+      );
+    } finally {
+      setRegeneratingId(null);
+    }
+  }
+
+  function updateRow(
+    id: string,
+    patch: Partial<Pick<OutreachDraftRow, "body" | "toEmail" | "subject">>
+  ) {
+    setOutreachRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, ...patch } : r))
+    );
   }
 
   return (
@@ -231,8 +316,8 @@ export default function LagKampanjeNyPage() {
           Ny sponsorsøknad
         </h1>
         <p className="mt-2 text-sm text-neutral-600">
-          Steg {step} av 3 — fyll inn kampanje, finn lokale bedrifter i
-          Brønnøysund, og lagre utkast til henvendelser.
+          Steg {step} av 3 — kampanje, sponsorer i Brønnøysund, og AI-skrevne
+          e-poster du kan redigere før lagring.
         </p>
       </div>
 
@@ -246,7 +331,7 @@ export default function LagKampanjeNyPage() {
         </span>
         <span aria-hidden>·</span>
         <span className={step === 3 ? "text-[var(--brand-pine)]" : ""}>
-          3. Send utkast
+          3. E-poster
         </span>
       </div>
 
@@ -502,14 +587,16 @@ export default function LagKampanjeNyPage() {
               </p>
               <button
                 type="button"
-                disabled={selectedList.length < 5}
-                onClick={() => setStep(3)}
+                disabled={selectedList.length < 5 || generateOutreach.isPending}
+                onClick={() => void handleGoToStep3()}
                 className={cn(
                   buttonVariants(),
                   "bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)] disabled:opacity-50"
                 )}
               >
-                Neste: forhåndsvis
+                {generateOutreach.isPending
+                  ? "Vent …"
+                  : "Neste: forhåndsvis e-poster"}
               </button>
             </div>
           </CardContent>
@@ -520,48 +607,146 @@ export default function LagKampanjeNyPage() {
         <Card className="border-[var(--brand-pine)]/10 bg-white shadow-sm">
           <CardHeader>
             <CardTitle className="text-[var(--brand-pine)]">
-              Forhåndsvis og lagre utkast
+              Forhåndsvis e-poster
             </CardTitle>
             <CardDescription>
-              Vi lagrer kampanjen som aktiv og oppretter utkast til e-post per
-              valgt bedrift (ingen e-post sendes ennå).
+              AI har skrevet en personlig e-post til hver valgt bedrift. Du kan
+              redigere før sending. Ingen e-post sendes ennå (Resend kobles på
+              senere).
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="flex max-h-72 flex-col gap-2 overflow-y-auto text-sm">
-              {selectedList.map((b) => (
-                <li
-                  key={b.orgNr}
-                  className="rounded-md border border-[var(--brand-pine)]/10 px-3 py-2"
-                >
-                  <span className="font-medium text-[var(--brand-pine)]">
-                    {b.name}
-                  </span>{" "}
-                  <span className="text-neutral-500">({b.orgNr})</span>
-                </li>
-              ))}
-            </ul>
-            <div className="flex flex-wrap gap-3">
-              <button
+          <CardContent className="space-y-6">
+            {generateOutreach.isPending && outreachRows.length === 0 ? (
+              <div className="rounded-lg border border-[var(--brand-pine)]/15 bg-[var(--brand-cream)]/40 px-4 py-6 text-center text-sm text-neutral-700">
+                <p className="font-medium text-[var(--brand-pine)]">
+                  AI skriver e-poster… ({genProgressLabel})
+                </p>
+                <p className="mt-2 text-xs text-neutral-500">
+                  Claude genererer én e-post om gangen. Dette kan ta litt tid.
+                </p>
+              </div>
+            ) : null}
+
+            {outreachRows.length > 0 ? (
+              <ul className="flex flex-col gap-6">
+                {outreachRows.map((row) => (
+                  <li
+                    key={row.id}
+                    className="rounded-xl border border-[var(--brand-pine)]/10 bg-neutral-50/60 p-4"
+                  >
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-semibold text-[var(--brand-pine)]">
+                          {row.name}
+                        </p>
+                        <p className="text-sm text-neutral-600">
+                          {row.industry ?? "Ukjent bransje"} · org.nr{" "}
+                          {row.orgNr}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 border-[var(--brand-pine)]/25"
+                        disabled={regeneratingId === row.id}
+                        onClick={() => void handleRegenerate(row)}
+                      >
+                        {regeneratingId === row.id
+                          ? "Regenererer …"
+                          : "Regenerer"}
+                      </Button>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <Label htmlFor={`subj-${row.id}`}>Emne</Label>
+                      <Input
+                        id={`subj-${row.id}`}
+                        value={row.subject}
+                        onChange={(e) =>
+                          updateRow(row.id, { subject: e.target.value })
+                        }
+                        className="border-[var(--brand-pine)]/15"
+                      />
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <Label htmlFor={`body-${row.id}`}>E-posttekst</Label>
+                      <Textarea
+                        id={`body-${row.id}`}
+                        rows={10}
+                        value={row.body}
+                        onChange={(e) =>
+                          updateRow(row.id, { body: e.target.value })
+                        }
+                        className="min-h-[200px] border-[var(--brand-pine)]/15 font-sans text-sm leading-relaxed"
+                      />
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                      <Label htmlFor={`to-${row.id}`}>Mottaker (e-post)</Label>
+                      <Input
+                        id={`to-${row.id}`}
+                        type="email"
+                        value={row.toEmail}
+                        onChange={(e) =>
+                          updateRow(row.id, { toEmail: e.target.value })
+                        }
+                        className="border-[var(--brand-pine)]/15"
+                      />
+                      {row.toEmail.includes("ingen-epost.stottespillet") ? (
+                        <p className="text-xs text-amber-800">
+                          Placeholder — erstatt med reell e-post hvis du kjenner
+                          kontaktperson.
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+
+            {!generateOutreach.isPending && outreachRows.length === 0 ? (
+              <p className="text-sm text-neutral-600">
+                Ingen e-poster å vise. Gå tilbake og velg bedrifter på nytt.
+              </p>
+            ) : null}
+
+            <div className="flex flex-col gap-3 border-t border-[var(--brand-pine)]/10 pt-4 sm:flex-row sm:flex-wrap">
+              <Button
                 type="button"
-                onClick={() => void handleFinalSubmit()}
-                disabled={submitOutreach.isPending}
-                className={cn(
-                  buttonVariants(),
-                  "bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
-                )}
+                disabled
+                variant="secondary"
+                className="opacity-60"
+                title="Resend-utsending kommer i neste versjon"
               >
-                {submitOutreach.isPending
-                  ? "Lagrer …"
-                  : `Send sponsorsøknad til ${selectedList.length} bedrifter (utkast)`}
-              </button>
-              <button
+                Send alle e-poster (kommer)
+              </Button>
+              <Button
                 type="button"
-                className={cn(buttonVariants({ variant: "outline" }))}
-                onClick={() => setStep(2)}
+                disabled={
+                  saveOutreachDrafts.isPending ||
+                  outreachRows.length === 0 ||
+                  generateOutreach.isPending
+                }
+                onClick={() => void handleSaveDrafts()}
+                className="bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
+              >
+                {saveOutreachDrafts.isPending
+                  ? "Lagrer …"
+                  : "Lagre som utkast"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={generateOutreach.isPending}
+                onClick={() => {
+                  setOutreachRows([]);
+                  setStep(2);
+                }}
               >
                 Tilbake
-              </button>
+              </Button>
             </div>
           </CardContent>
         </Card>

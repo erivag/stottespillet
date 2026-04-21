@@ -4,6 +4,8 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
+import { campaignTypeLabel } from "@/lib/admin/labels";
+import { generateSponsorEmail } from "@/lib/claude/generate-email";
 import { SPLEIS_TYPES } from "@/lib/catalog/spleis-types";
 import {
   filterSortAndLimitSponsorCompanies,
@@ -67,6 +69,66 @@ async function assertCampaignOwnedByUser(
       message: "Kampanje ikke funnet.",
     });
   }
+}
+
+const outreachBedriftInput = z.object({
+  orgNr: z.string().regex(/^\d{9}$/),
+  name: z.string().min(1),
+  industry: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+  address: z.string().optional().nullable(),
+  postalCode: z.string().optional().nullable(),
+  municipality: z.string().optional().nullable(),
+  phone: z.string().optional().nullable(),
+  employees: z.number().int().nonnegative().optional(),
+});
+
+type OutreachBedriftInput = z.infer<typeof outreachBedriftInput>;
+
+async function loadCampaignForOutreach(
+  campaignId: string,
+  userId: string
+): Promise<{
+  organizationName: string;
+  title: string;
+  amountOre: number;
+  exposureDescription: string | null;
+  campaignType: string;
+}> {
+  const [row] = await db
+    .select({
+      organizationName: organizations.name,
+      title: campaigns.title,
+      amountOre: campaigns.amountOre,
+      exposureDescription: campaigns.exposureDescription,
+      campaignType: campaigns.campaignType,
+    })
+    .from(campaigns)
+    .innerJoin(
+      organizations,
+      eq(campaigns.organizationId, organizations.id)
+    )
+    .where(
+      and(eq(campaigns.id, campaignId), eq(organizations.userId, userId))
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Kampanje ikke funnet.",
+    });
+  }
+
+  return row;
+}
+
+function toOutreachToEmail(b: OutreachBedriftInput): string {
+  const emailTrim = b.email?.trim() ?? "";
+  if (emailTrim.length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+    return emailTrim;
+  }
+  return `utkast+${b.orgNr}@ingen-epost.stottespillet.no`;
 }
 
 async function upsertBrregCacheRow(
@@ -782,6 +844,259 @@ export const lagRouter = router({
         totalAfterFilter,
         displayed,
       };
+    }),
+
+  generateOutreach: protectedProcedure
+    .input(
+      z.object({
+        campaignId: z.string().uuid(),
+        bedrifter: z.array(outreachBedriftInput).min(5).max(20),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Ikke innlogget.",
+        });
+      }
+
+      const camp = await loadCampaignForOutreach(
+        input.campaignId,
+        ctx.user.id
+      );
+      const beloepStr = (camp.amountOre / 100).toLocaleString("nb-NO");
+      const typeLabel = campaignTypeLabel(camp.campaignType);
+      const eksponering =
+        camp.exposureDescription?.trim() ||
+        "Eksponering og takk fra laget avtales nærmere med hvert enkelt sponsorat.";
+
+      const now = new Date().toISOString();
+
+      await db
+        .delete(outreachEmails)
+        .where(
+          and(
+            eq(outreachEmails.campaignId, input.campaignId),
+            eq(outreachEmails.status, "draft"),
+            isNull(outreachEmails.sponsorId)
+          )
+        );
+
+      const emails: {
+        id: string;
+        orgNr: string;
+        name: string;
+        industry: string | null;
+        toEmail: string;
+        subject: string;
+        body: string;
+      }[] = [];
+
+      try {
+        for (const b of input.bedrifter) {
+          const body = await generateSponsorEmail({
+            companyName: b.name,
+            contactName: null,
+            industry: b.industry,
+            lagNavn: camp.organizationName,
+            kampanjeTittel: camp.title,
+            beloep: beloepStr,
+            eksponering,
+            type: typeLabel,
+          });
+
+          const toEmail = toOutreachToEmail(b);
+          const subject = `Sponsorsøknad — ${b.name}`;
+          const bodyFinal =
+            body.trim().length > 0
+              ? body.trim()
+              : `Hei,\n\nVi ønsker å ta kontakt angående sponsorskap for «${camp.title}».\n\nMed hilsen,\n${camp.organizationName}`;
+
+          const [inserted] = await db
+            .insert(outreachEmails)
+            .values({
+              campaignId: input.campaignId,
+              sponsorId: null,
+              prospectOrgNr: b.orgNr,
+              prospectCompanyName: b.name,
+              toEmail,
+              subject,
+              body: bodyFinal,
+              trackingToken: randomBytes(24).toString("hex"),
+              status: "draft",
+              createdAt: now,
+            })
+            .returning({
+              id: outreachEmails.id,
+              toEmail: outreachEmails.toEmail,
+              subject: outreachEmails.subject,
+              body: outreachEmails.body,
+              prospectOrgNr: outreachEmails.prospectOrgNr,
+              prospectCompanyName: outreachEmails.prospectCompanyName,
+            });
+
+          if (!inserted) continue;
+          emails.push({
+            id: inserted.id,
+            orgNr: inserted.prospectOrgNr ?? b.orgNr,
+            name: inserted.prospectCompanyName ?? b.name,
+            industry: b.industry ?? null,
+            toEmail: inserted.toEmail,
+            subject: inserted.subject,
+            body: inserted.body,
+          });
+        }
+      } catch (e) {
+        await db
+          .delete(outreachEmails)
+          .where(
+            and(
+              eq(outreachEmails.campaignId, input.campaignId),
+              eq(outreachEmails.status, "draft"),
+              isNull(outreachEmails.sponsorId)
+            )
+          );
+        const msg =
+          e instanceof Error ? e.message : "Kunne ikke generere e-poster.";
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: msg,
+        });
+      }
+
+      return { emails };
+    }),
+
+  saveOutreachDrafts: protectedProcedure
+    .input(
+      z.object({
+        campaignId: z.string().uuid(),
+        rows: z
+          .array(
+            z.object({
+              id: z.string().uuid(),
+              body: z.string().min(1).max(16_000),
+              toEmail: z.string().min(3).max(320),
+              subject: z.string().min(1).max(300).optional(),
+            })
+          )
+          .min(1)
+          .max(30),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Ikke innlogget.",
+        });
+      }
+
+      await assertCampaignOwnedByUser(input.campaignId, ctx.user.id);
+      const now = new Date().toISOString();
+
+      for (const r of input.rows) {
+        await db
+          .update(outreachEmails)
+          .set({
+            body: r.body,
+            toEmail: r.toEmail.trim(),
+            ...(r.subject?.trim()
+              ? { subject: r.subject.trim() }
+              : {}),
+          })
+          .where(
+            and(
+              eq(outreachEmails.id, r.id),
+              eq(outreachEmails.campaignId, input.campaignId),
+              eq(outreachEmails.status, "draft"),
+              isNull(outreachEmails.sponsorId)
+            )
+          );
+      }
+
+      await db
+        .update(campaigns)
+        .set({ status: "active", updatedAt: now })
+        .where(eq(campaigns.id, input.campaignId));
+
+      return { ok: true as const };
+    }),
+
+  regenerateOutreachEmail: protectedProcedure
+    .input(
+      z.object({
+        campaignId: z.string().uuid(),
+        outreachEmailId: z.string().uuid(),
+        industry: z.string().optional().nullable(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.user) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Ikke innlogget.",
+        });
+      }
+
+      const camp = await loadCampaignForOutreach(
+        input.campaignId,
+        ctx.user.id
+      );
+
+      const [row] = await db
+        .select({
+          id: outreachEmails.id,
+          prospectCompanyName: outreachEmails.prospectCompanyName,
+          subject: outreachEmails.subject,
+        })
+        .from(outreachEmails)
+        .where(
+          and(
+            eq(outreachEmails.id, input.outreachEmailId),
+            eq(outreachEmails.campaignId, input.campaignId),
+            eq(outreachEmails.status, "draft"),
+            isNull(outreachEmails.sponsorId)
+          )
+        )
+        .limit(1);
+
+      if (!row) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Utkast ikke funnet.",
+        });
+      }
+
+      const beloepStr = (camp.amountOre / 100).toLocaleString("nb-NO");
+      const typeLabel = campaignTypeLabel(camp.campaignType);
+      const eksponering =
+        camp.exposureDescription?.trim() ||
+        "Eksponering og takk fra laget avtales nærmere med hvert enkelt sponsorat.";
+
+      const body = await generateSponsorEmail({
+        companyName: row.prospectCompanyName ?? "bedriften",
+        contactName: null,
+        industry: input.industry,
+        lagNavn: camp.organizationName,
+        kampanjeTittel: camp.title,
+        beloep: beloepStr,
+        eksponering,
+        type: typeLabel,
+      });
+
+      const bodyFinal =
+        body.trim().length > 0
+          ? body.trim()
+          : `Hei,\n\nVi ønsker å ta kontakt angående sponsorskap for «${camp.title}».\n\nMed hilsen,\n${camp.organizationName}`;
+
+      await db
+        .update(outreachEmails)
+        .set({ body: bodyFinal })
+        .where(eq(outreachEmails.id, input.outreachEmailId));
+
+      return { body: bodyFinal, subject: row.subject };
     }),
 
   submitCampaignOutreach: protectedProcedure
