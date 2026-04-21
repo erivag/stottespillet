@@ -26,21 +26,40 @@ const dtf = new Intl.DateTimeFormat("nb-NO", {
 });
 
 export default function AdminDashboardPage() {
-  const { data, isLoading, isError } = trpc.admin.dashboard.useQuery();
+  const { data, isLoading, isError } = trpc.admin.dashboard.useQuery(
+    undefined,
+    {
+      retry: false,
+      throwOnError: false,
+    }
+  );
 
   if (isLoading) {
     return <AdminDashboardSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
+        <CardHeader>
+          <CardTitle className="text-base text-[var(--brand-pine)]">
+            Oversikt
+          </CardTitle>
+          <CardDescription>
+            Vi fikk ikke lastet tallene akkurat nå. Prøv igjen om litt.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-neutral-600">
+          Dashbordet viser foreløpig ingen data.
+        </CardContent>
+      </Card>
+    );
   }
 
   const d = data ?? EMPTY_ADMIN_DASHBOARD;
 
   return (
     <div className="flex flex-col gap-8">
-      {isError ? (
-        <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-xs text-neutral-500">
-          Data kunne ikke lastes akkurat nå. Tallene under kan være tomme.
-        </p>
-      ) : null}
       <div>
         <h2 className="font-heading text-2xl font-semibold tracking-tight text-[var(--brand-pine)] sm:text-3xl">
           Oversikt

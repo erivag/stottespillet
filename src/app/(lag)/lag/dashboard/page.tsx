@@ -37,10 +37,31 @@ const dtf = new Intl.DateTimeFormat("nb-NO", {
 });
 
 export default function LagDashboardPage() {
-  const { data, isLoading, isError } = trpc.lag.dashboard.useQuery();
+  const { data, isLoading, isError } = trpc.lag.dashboard.useQuery(undefined, {
+    retry: false,
+    throwOnError: false,
+  });
 
   if (isLoading) {
     return <DashboardSkeleton />;
+  }
+
+  if (isError) {
+    return (
+      <Card className="border-dashed border-[var(--brand-pine)]/20 bg-white">
+        <CardHeader>
+          <CardTitle className="text-base text-[var(--brand-pine)]">
+            Dashboard
+          </CardTitle>
+          <CardDescription>
+            Vi fikk ikke lastet data akkurat nå. Prøv igjen om litt.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-sm text-neutral-600">
+          Dashbordet viser foreløpig ingen data.
+        </CardContent>
+      </Card>
+    );
   }
 
   const d = data ?? EMPTY_LAG_DASHBOARD;
@@ -49,11 +70,6 @@ export default function LagDashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      {isError ? (
-        <p className="rounded-lg border border-neutral-200 bg-white px-3 py-2 text-center text-xs text-neutral-500">
-          Data kunne ikke lastes akkurat nå. Visningen under kan være tom.
-        </p>
-      ) : null}
       <Card className="border-[var(--brand-pine)]/12 bg-gradient-to-br from-[var(--brand-pine)] to-[var(--brand-pine-mid)] text-white shadow-md">
         <CardContent className="p-6 sm:p-8">
           <p className="text-sm font-medium text-[var(--brand-gold)]">
