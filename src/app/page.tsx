@@ -1,10 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  MousePointerClick,
-  Package,
-  Sparkles,
-  FileText,
 } from "lucide-react";
 
 import {
@@ -30,29 +26,6 @@ const kr = new Intl.NumberFormat("nb-NO", {
   currency: "NOK",
   maximumFractionDigits: 0,
 });
-
-const STEPS = [
-  {
-    icon: FileText,
-    title: "Laget oppretter søknad",
-    detail: "På rundt tre minutter.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI finner og kontakter bedrifter",
-    detail: "Personlige e-poster automatisk.",
-  },
-  {
-    icon: MousePointerClick,
-    title: "Bedrift godkjenner med ett klikk",
-    detail: "Enkel flyt med betaling når alt er klart.",
-  },
-  {
-    icon: Package,
-    title: "Produkt leveres – sponsor synes",
-    detail: "Synlighet på det dere har avtalt.",
-  },
-] as const;
 
 const navLinkClass =
   "rounded-lg px-3 py-2 text-sm font-medium text-white/90 transition-colors hover:bg-white/10 hover:text-[#FFBE4A]";
@@ -125,44 +98,6 @@ export default function Home() {
           </div>
         </div>
       </header>
-
-      {/* ——— Slik fungerer det ——— */}
-      <section
-        className="mx-auto max-w-6xl px-4 py-16 sm:px-6 lg:py-20"
-        aria-labelledby="how-heading"
-      >
-        <h2
-          id="how-heading"
-          className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
-        >
-          Slik fungerer det
-        </h2>
-        <ol className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {STEPS.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <li key={s.title}>
-                <Card className="h-full border-[#0A2E1A]/10 bg-white shadow-sm transition-shadow hover:shadow-md">
-                  <CardContent className="p-5 pt-6">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#0A2E1A] text-[#FFBE4A]">
-                      <Icon className="size-5" aria-hidden />
-                    </span>
-                    <p className="mt-3 text-xs font-semibold uppercase tracking-wide text-[#FFBE4A]">
-                      Steg {i + 1}
-                    </p>
-                    <h3 className="mt-1 font-heading text-lg font-semibold text-[#0A2E1A]">
-                      {s.title}
-                    </h3>
-                    <p className="mt-2 text-sm leading-relaxed text-neutral-600">
-                      {s.detail}
-                    </p>
-                  </CardContent>
-                </Card>
-              </li>
-            );
-          })}
-        </ol>
-      </section>
 
       {/* ——— To måter å bestille på ——— */}
       <section
