@@ -46,9 +46,10 @@ export type DirectOrderFormState =
   | { ok: false; message: string };
 
 export async function submitDirectOrder(
-  _prev: DirectOrderFormState,
+  prevState: DirectOrderFormState,
   formData: FormData
 ): Promise<DirectOrderFormState> {
+  void prevState;
   const parsed = schema.safeParse({
     companyName: formData.get("companyName"),
     contactName: formData.get("contactName"),

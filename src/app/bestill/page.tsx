@@ -40,7 +40,7 @@ function SubmitButton() {
 }
 
 export default function BestillPage() {
-  const [state, formAction] = useFormState<DirectOrderFormState>(
+  const [state, formAction] = useFormState<DirectOrderFormState, FormData>(
     submitDirectOrder,
     { ok: false, message: "" }
   );
