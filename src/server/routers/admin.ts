@@ -604,7 +604,7 @@ export const adminRouter = router({
         createdAt: outreachEmails.createdAt,
         campaignTitle: campaigns.title,
         organizationName: organizations.name,
-        sponsorName: sponsors.companyName,
+        sponsorName: sql<string>`coalesce(${sponsors.companyName}, ${outreachEmails.prospectCompanyName})`,
       })
       .from(outreachEmails)
       .innerJoin(campaigns, eq(outreachEmails.campaignId, campaigns.id))
@@ -612,7 +612,7 @@ export const adminRouter = router({
         organizations,
         eq(campaigns.organizationId, organizations.id)
       )
-      .innerJoin(sponsors, eq(outreachEmails.sponsorId, sponsors.id))
+      .leftJoin(sponsors, eq(outreachEmails.sponsorId, sponsors.id))
       .orderBy(desc(outreachEmails.createdAt))
       .limit(200);
 

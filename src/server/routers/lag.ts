@@ -1,17 +1,22 @@
+import { randomBytes } from "node:crypto";
+
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { SPLEIS_TYPES } from "@/lib/catalog/spleis-types";
+import { searchBrreg } from "@/lib/brreg/search";
 import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
 import { sendAdminOrderNotification } from "@/lib/resend/send-admin-order-notification";
 import { supplierDisplayLine } from "@/lib/shop/catalog-labels";
 import {
+  brregCache,
   campaigns,
   matches,
   orders,
   organizations,
+  outreachEmails,
   products,
   socialPosts,
   spleises,
@@ -28,6 +33,51 @@ function spleisTypeLabel(type: string): string {
 }
 
 type ActivityKind = "match" | "order";
+
+async function assertCampaignOwnedByUser(
+  campaignId: string,
+  userId: string
+): Promise<void> {
+  const [row] = await db
+    .select({ id: campaigns.id })
+    .from(campaigns)
+    .innerJoin(organizations, eq(campaigns.organizationId, organizations.id))
+    .where(
+      and(eq(campaigns.id, campaignId), eq(organizations.userId, userId))
+    )
+    .limit(1);
+
+  if (!row) {
+    throw new TRPCError({
+      code: "NOT_FOUND",
+      message: "Kampanje ikke funnet.",
+    });
+  }
+}
+
+async function upsertBrregCacheRow(
+  organizationNumber: string,
+  payload: Record<string, unknown>
+): Promise<void> {
+  const now = new Date().toISOString();
+  const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
+  await db
+    .insert(brregCache)
+    .values({
+      organizationNumber,
+      payload,
+      fetchedAt: now,
+      expiresAt,
+    })
+    .onConflictDoUpdate({
+      target: brregCache.organizationNumber,
+      set: {
+        payload: sql`excluded.payload`,
+        fetchedAt: sql`excluded.fetched_at`,
+        expiresAt: sql`excluded.expires_at`,
+      },
+    });
+}
 
 export const lagRouter = router({
   dashboard: protectedProcedure.query(async ({ ctx }) => {
@@ -534,6 +584,195 @@ export const lagRouter = router({
       }
 
       return { ok: true as const };
+    }),
+
+  createCampaignDraft: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(1, "Tittel er påkrevd").max(200),
+        campaignType: z.enum(["turnering", "sesongstart", "drakter", "annet"]),
+        amountKr: z.number().positive().max(50_000_000),
+        eventDate: z.string().optional().nullable(),
+        exposureDescription: z.string().min(1, "Beskriv hva sponsor får").max(4000),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [org] = await db
+        .select({ id: organizations.id })
+        .from(organizations)
+        .where(eq(organizations.userId, ctx.user.id))
+        .limit(1);
+
+      if (!org) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "Opprett lagprofil under Innstillinger først.",
+        });
+      }
+
+      const now = new Date().toISOString();
+      const amountOre = Math.round(input.amountKr * 100);
+      const eventRaw = input.eventDate?.trim();
+      const eventDate =
+        eventRaw && eventRaw.length > 0
+          ? new Date(eventRaw).toISOString()
+          : null;
+
+      const [row] = await db
+        .insert(campaigns)
+        .values({
+          organizationId: org.id,
+          title: input.title.trim(),
+          description: null,
+          campaignType: input.campaignType,
+          amountOre,
+          eventDate,
+          quantity: null,
+          exposureDescription: input.exposureDescription.trim(),
+          status: "draft",
+          createdAt: now,
+          updatedAt: now,
+        })
+        .returning({ id: campaigns.id });
+
+      if (!row) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Kunne ikke opprette kampanje.",
+        });
+      }
+
+      return { campaignId: row.id };
+    }),
+
+  findSponsors: protectedProcedure
+    .input(
+      z.object({
+        campaignId: z.string().uuid(),
+        industries: z.array(z.string()).optional(),
+        maxResults: z.number().int().min(1).max(100).default(20),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertCampaignOwnedByUser(input.campaignId, ctx.user.id);
+
+      const [org] = await db
+        .select({
+          postalCode: organizations.postalCode,
+        })
+        .from(organizations)
+        .where(eq(organizations.userId, ctx.user.id))
+        .limit(1);
+
+      const postal = org?.postalCode?.replace(/\D/g, "").slice(0, 4) ?? "";
+      if (postal.length !== 4) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Legg til postnummer i innstillinger først.",
+        });
+      }
+
+      const industry = input.industries?.find((s) => s.trim().length > 0);
+      const { companies, rawEnheter } = await searchBrreg({
+        postalCode: postal,
+        industry: industry?.trim(),
+        size: input.maxResults,
+        page: 0,
+      });
+
+      for (const raw of rawEnheter) {
+        const nr = String(raw.organisasjonsnummer ?? "").replace(/\D/g, "");
+        if (nr.length !== 9) continue;
+        await upsertBrregCacheRow(nr, raw as Record<string, unknown>);
+      }
+
+      return { bedrifter: companies, total: companies.length };
+    }),
+
+  submitCampaignOutreach: protectedProcedure
+    .input(
+      z.object({
+        campaignId: z.string().uuid(),
+        selections: z
+          .array(
+            z.object({
+              orgNr: z.string().regex(/^\d{9}$/),
+              name: z.string().min(1),
+              industry: z.string().optional().nullable(),
+              address: z.string().optional().nullable(),
+              postalCode: z.string().optional().nullable(),
+              municipality: z.string().optional().nullable(),
+              email: z.string().email().optional().nullable(),
+              phone: z.string().optional().nullable(),
+              employees: z.number().int().nonnegative().optional(),
+            })
+          )
+          .min(5)
+          .max(20),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      await assertCampaignOwnedByUser(input.campaignId, ctx.user.id);
+
+      const now = new Date().toISOString();
+
+      await db
+        .delete(outreachEmails)
+        .where(
+          and(
+            eq(outreachEmails.campaignId, input.campaignId),
+            eq(outreachEmails.status, "draft"),
+            isNull(outreachEmails.sponsorId)
+          )
+        );
+
+      for (const s of input.selections) {
+        const emailTrim = s.email?.trim() ?? "";
+        const toEmail =
+          emailTrim.length > 0
+            ? emailTrim
+            : `utkast+${s.orgNr}@ingen-epost.stottespillet.no`;
+
+        const subject = `Sponsorsøknad — ${s.name}`;
+        const bodyParts = [
+          "Hei,",
+          "",
+          "Dette er et utkast til henvendelse fra et idrettslag/komité via Støttespillet.",
+          "E-post er ikke sendt ennå.",
+          "",
+          s.industry ? `Bransje (Brønnøysund): ${s.industry}` : null,
+          s.address ? `Adresse: ${s.address}` : null,
+          s.postalCode || s.municipality
+            ? `Poststed: ${[s.postalCode, s.municipality].filter(Boolean).join(" ")}`
+            : null,
+          typeof s.employees === "number" ? `Ansatte (registrert): ${s.employees}` : null,
+          s.phone ? `Telefon (registrert): ${s.phone}` : null,
+          "",
+          "Med vennlig hilsen,",
+          "Støttespillet",
+        ];
+        const body = bodyParts.filter(Boolean).join("\n");
+
+        await db.insert(outreachEmails).values({
+          campaignId: input.campaignId,
+          sponsorId: null,
+          prospectOrgNr: s.orgNr,
+          prospectCompanyName: s.name,
+          toEmail,
+          subject,
+          body,
+          trackingToken: randomBytes(24).toString("hex"),
+          status: "draft",
+          createdAt: now,
+        });
+      }
+
+      await db
+        .update(campaigns)
+        .set({ status: "active", updatedAt: now })
+        .where(eq(campaigns.id, input.campaignId));
+
+      return { ok: true as const, count: input.selections.length };
     }),
 
   listShopProducts: publicProcedure.query(async () => {

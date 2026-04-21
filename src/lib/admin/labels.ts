@@ -97,6 +97,9 @@ export function campaignTypeLabel(type: string | null | undefined): string {
     arrangement: "Arrangement",
     utstyr: "Utstyr",
     reise: "Reise",
+    turnering: "Turnering",
+    sesongstart: "Sesongstart",
+    drakter: "Drakter",
     annet: "Annet",
   };
   return map[type] ?? type;

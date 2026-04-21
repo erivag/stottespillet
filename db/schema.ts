@@ -110,9 +110,13 @@ export const outreachEmails = pgTable(
     campaignId: uuid("campaign_id")
       .notNull()
       .references(() => campaigns.id, { onDelete: "cascade" }),
-    sponsorId: uuid("sponsor_id")
-      .notNull()
-      .references(() => sponsors.id, { onDelete: "cascade" }),
+    /** Registrert sponsor i Støttespillet — null når målet kun finnes i Brønnøysund (utkast). */
+    sponsorId: uuid("sponsor_id").references(() => sponsors.id, {
+      onDelete: "cascade",
+    }),
+    /** Brønnøysund org.nr når sponsorId er null. */
+    prospectOrgNr: text("prospect_org_nr"),
+    prospectCompanyName: text("prospect_company_name"),
     toEmail: text("to_email").notNull(),
     subject: text("subject").notNull(),
     body: text("body").notNull(),

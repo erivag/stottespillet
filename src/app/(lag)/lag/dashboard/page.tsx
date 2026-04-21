@@ -158,7 +158,7 @@ export default function LagDashboardPage() {
               sponsorsøk.
             </p>
             <Link
-              href="/kampanje/ny"
+              href="/lag/kampanje/ny"
               className={cn(
                 buttonVariants(),
                 "bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
@@ -206,7 +206,7 @@ export default function LagDashboardPage() {
         </h2>
         <div className="grid gap-4 sm:grid-cols-3">
           <ShortcutCard
-            href="/kampanje/ny"
+            href="/lag/kampanje/ny"
             title="Søk sponsor"
             text="Start en ny sponsorsøknad."
             icon={Handshake}
