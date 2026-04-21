@@ -5,12 +5,6 @@ import { useState } from "react";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  productCategoryNb,
-  stockStatusNb,
-  supplierDisplayLine,
-} from "@/lib/shop/catalog-labels";
-import { storagePublicObjectUrl } from "@/lib/supabase/storage-public-url";
 import { trpc } from "@/lib/trpc/react";
 import { cn } from "@/lib/utils";
 
@@ -101,29 +95,17 @@ export default function AdminProdukterPage() {
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-[var(--brand-pine)]/10 bg-white shadow-sm">
-          <table className="w-full min-w-[960px] text-left text-sm">
+          <table className="w-full min-w-[640px] text-left text-sm">
             <thead className="border-b border-[var(--brand-pine)]/10 bg-[var(--brand-cream)]/50">
               <tr>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Bilde
-                </th>
-                <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                   Navn
-                </th>
-                <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Kategori
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                   Pris (eks. MVA)
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Innkjøp (eks. MVA)
-                </th>
-                <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                   Leverandør
-                </th>
-                <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Lager
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                   Aktiv
@@ -138,36 +120,13 @@ export default function AdminProdukterPage() {
             </thead>
             <tbody>
               {items.map((row) => {
-                const img =
-                  row.imageStoragePath &&
-                  storagePublicObjectUrl(
-                    "product-images",
-                    row.imageStoragePath
-                  );
                 return (
                   <tr
                     key={row.id}
                     className="border-b border-[var(--brand-pine)]/5 last:border-0"
                   >
-                    <td className="px-4 py-3">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={img}
-                          alt=""
-                          className="h-10 w-10 rounded-md border border-[var(--brand-pine)]/10 object-cover"
-                        />
-                      ) : (
-                        <span className="text-2xl" aria-hidden>
-                          {row.emoji?.trim() || "—"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                      {row.name}
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">
-                      {productCategoryNb(row.category)}
+                    <td className="max-w-[220px] px-4 py-3 font-medium text-[var(--brand-pine)]">
+                      <span className="line-clamp-2">{row.name}</span>
                     </td>
                     <td className="px-4 py-3 tabular-nums">
                       {nok.format(row.priceOre / 100)}{" "}
@@ -175,27 +134,8 @@ export default function AdminProdukterPage() {
                         eks. MVA
                       </span>
                     </td>
-                    <td className="px-4 py-3 tabular-nums text-neutral-600">
-                      {row.purchasePriceOre != null ? (
-                        <>
-                          {nok.format(row.purchasePriceOre / 100)}{" "}
-                          <span className="text-xs text-neutral-500">
-                            eks. MVA
-                          </span>
-                        </>
-                      ) : (
-                        "—"
-                      )}
-                    </td>
-                    <td className="max-w-[160px] truncate px-4 py-3 text-neutral-600">
-                      {supplierDisplayLine(
-                        row.supplierKey,
-                        row.supplierOther,
-                        row.supplier
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-neutral-600">
-                      {stockStatusNb(row.stockStatus)}
+                    <td className="max-w-[180px] truncate px-4 py-3 text-neutral-600">
+                      {row.supplier?.trim() || "—"}
                     </td>
                     <td className="px-4 py-3">
                       <span

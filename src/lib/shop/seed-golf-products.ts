@@ -4,14 +4,22 @@ import { db } from "@/lib/db";
 import { slugifyName } from "@/lib/slug";
 import { products } from "@db/schema";
 
-import { supplierDisplayLine } from "./catalog-labels";
-import { golfProductsConfig } from "./golf-products-config";
+import {
+  golfProductsConfig,
+  type GolfProductConfig,
+} from "./golf-products-config";
 
 export type { GolfProductConfig as GolfProductSeed } from "./golf-products-config";
 
-function categoryCode(label: string): string {
-  if (label === "Sportsutstyr") return "sports_equipment";
-  return "other";
+function buildDescription(g: GolfProductConfig): string | null {
+  const parts = [
+    g.description?.trim(),
+    `${g.emoji} Golfequipment.`,
+    `Minimum ${g.minQty} dusin per ordre. Levering: ${g.deliveryDays}.`,
+    g.logoTrykk ? "Logo-trykk kan bestilles." : null,
+  ].filter(Boolean) as string[];
+  const text = parts.join("\n\n");
+  return text.length > 0 ? text : null;
 }
 
 /**
@@ -29,32 +37,14 @@ export async function seedGolfProductsIfEmpty(): Promise<{
     return { inserted: 0, skipped: true };
   }
 
-  const now = new Date().toISOString();
-  const supplierKey = "promo_nordic" as const;
-
   await db.insert(products).values(
     golfProductsConfig.map((g) => ({
       name: g.name,
       slug: slugifyName(g.name),
-      description:
-        "description" in g && typeof g.description === "string"
-          ? g.description.trim() || null
-          : null,
-      emoji: g.emoji,
-      imageStoragePath: null,
-      category: categoryCode(g.category),
+      description: buildDescription(g),
       priceOre: g.priceOre,
-      purchasePriceOre: null,
-      supplier: supplierDisplayLine(supplierKey, null, g.supplier),
-      supplierKey,
-      supplierOther: null,
-      allowsLogoPrint: g.logoTrykk,
-      minOrderQty: g.minQty,
-      deliveryTimeText: g.deliveryDays,
-      stockStatus: "in_stock" as const,
+      supplier: g.supplier,
       isActive: true,
-      createdAt: now,
-      updatedAt: now,
     }))
   );
 

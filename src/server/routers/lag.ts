@@ -20,7 +20,6 @@ import {
 } from "@/lib/pricing/norwegian-vat";
 import { sendAdminOrderNotification } from "@/lib/resend/send-admin-order-notification";
 import { sendShopBookingEmails } from "@/lib/resend/send-shop-booking-emails";
-import { supplierDisplayLine } from "@/lib/shop/catalog-labels";
 import {
   dozenVolumeDiscountPercent,
   subtotalOreForDozenOrder,
@@ -1194,13 +1193,7 @@ export const lagRouter = router({
         name: products.name,
         slug: products.slug,
         description: products.description,
-        emoji: products.emoji,
-        imageStoragePath: products.imageStoragePath,
         priceOre: products.priceOre,
-        allowsLogoPrint: products.allowsLogoPrint,
-        minOrderQty: products.minOrderQty,
-        deliveryTimeText: products.deliveryTimeText,
-        stockStatus: products.stockStatus,
       })
       .from(products)
       .where(eq(products.isActive, true))
@@ -1235,7 +1228,12 @@ export const lagRouter = router({
       }
 
       const [product] = await db
-        .select()
+        .select({
+          id: products.id,
+          name: products.name,
+          priceOre: products.priceOre,
+          supplier: products.supplier,
+        })
         .from(products)
         .where(
           and(eq(products.id, input.productId), eq(products.isActive, true))
@@ -1246,20 +1244,6 @@ export const lagRouter = router({
         throw new TRPCError({
           code: "NOT_FOUND",
           message: "Produktet finnes ikke eller er ikke tilgjengelig.",
-        });
-      }
-
-      if (input.quantity < product.minOrderQty) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Minimum antall er ${product.minOrderQty}.`,
-        });
-      }
-
-      if (product.stockStatus === "out_of_stock") {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Produktet er utsolgt.",
         });
       }
 
@@ -1311,11 +1295,7 @@ export const lagRouter = router({
       const mvaOre = mvaOreFromNetOre(totalOre);
       const mvaKrFormatted = kr(mvaOre);
       const totalInklMvaKrFormatted = kr(grossOreFromNetOre(totalOre));
-      const supplierLine = supplierDisplayLine(
-        product.supplierKey,
-        product.supplierOther,
-        product.supplier
-      );
+      const supplierLine = product.supplier?.trim() || "—";
 
       try {
         await sendShopBookingEmails({

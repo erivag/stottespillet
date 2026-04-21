@@ -28,13 +28,11 @@ import {
   PRICE_EX_VAT_SUFFIX,
   VAT_HINT_SHORT,
 } from "@/lib/pricing/norwegian-vat";
-import { stockStatusNb } from "@/lib/shop/catalog-labels";
 import {
   dozenVolumeDiscountPercent,
   subtotalOreForDozenOrder,
   totalOreForDozenOrder,
 } from "@/lib/shop/volume-discount";
-import { storagePublicObjectUrl } from "@/lib/supabase/storage-public-url";
 import { trpc } from "@/lib/trpc/react";
 
 const nok = new Intl.NumberFormat("nb-NO", {
@@ -48,13 +46,7 @@ type ShopProduct = {
   name: string;
   slug: string;
   description: string | null;
-  emoji: string | null;
-  imageStoragePath: string | null;
   priceOre: number;
-  allowsLogoPrint: boolean;
-  minOrderQty: number;
-  deliveryTimeText: string | null;
-  stockStatus: string;
 };
 
 export function LagShopClient() {
@@ -96,7 +88,7 @@ export function LagShopClient() {
 
   function openFor(p: ShopProduct) {
     setDialogProduct(p);
-    setQuantity(Math.max(p.minOrderQty, 1));
+    setQuantity(1);
     setComment("");
     setFormError(null);
     setStep("form");
@@ -110,8 +102,8 @@ export function LagShopClient() {
   async function submitInquiry() {
     if (!dialogProduct) return;
     setFormError(null);
-    if (quantity < dialogProduct.minOrderQty) {
-      setFormError(`Minimum antall er ${dialogProduct.minOrderQty}.`);
+    if (quantity < 1) {
+      setFormError("Velg minst 1 dusin.");
       return;
     }
 
@@ -158,74 +150,42 @@ export function LagShopClient() {
             Ingen produkter i shop akkurat nå.
           </li>
         ) : (
-          items.map((p) => {
-            const img =
-              p.imageStoragePath &&
-              storagePublicObjectUrl("product-images", p.imageStoragePath);
-            const out = p.stockStatus === "out_of_stock";
-            return (
-              <li key={p.id}>
-                <Card className="flex h-full flex-col border-[var(--brand-pine)]/10 bg-white transition-all hover:-translate-y-0.5 hover:border-[var(--brand-gold)]/35 hover:shadow-md">
-                  <CardHeader className="pb-3 text-center sm:text-left">
-                    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
-                      {img ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={img}
-                          alt=""
-                          className="h-20 w-20 shrink-0 rounded-xl border border-[var(--brand-pine)]/10 object-cover"
-                        />
-                      ) : (
-                        <span
-                          className="flex h-20 w-20 shrink-0 items-center justify-center text-5xl leading-none"
-                          aria-hidden
-                        >
-                          {p.emoji?.trim() || "📦"}
-                        </span>
-                      )}
-                      <div className="min-w-0 flex-1 text-center sm:text-left">
-                        <CardTitle className="text-lg leading-snug text-[var(--brand-pine)]">
-                          {p.name}
-                        </CardTitle>
-                        <CardDescription className="mt-2">
-                          {stockStatusNb(p.stockStatus)}
-                          {p.deliveryTimeText?.trim()
-                            ? ` · Levering: ${p.deliveryTimeText.trim()}`
-                            : ""}
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="mt-auto flex flex-col items-center gap-3 pt-0 sm:items-stretch">
-                    <div className="text-center sm:text-left">
-                      <p className="text-base font-semibold tabular-nums text-[var(--brand-gold)]">
-                        {nok.format(p.priceOre / 100)} per dusin{" "}
-                        <span className="font-normal text-neutral-600">
-                          {PRICE_EX_VAT_SUFFIX}
-                        </span>
-                      </p>
-                      <p className="mt-0.5 text-xs text-neutral-500">
-                        {VAT_HINT_SHORT}
-                      </p>
-                    </div>
-                    {p.allowsLogoPrint ? (
-                      <span className="mx-auto w-fit rounded-full border border-[var(--brand-gold)]/50 bg-[var(--brand-gold)]/15 px-3 py-1 text-xs font-medium text-[var(--brand-pine)] sm:mx-0">
-                        Logo-trykk inkludert
+          items.map((p) => (
+            <li key={p.id}>
+              <Card className="flex h-full flex-col border-[var(--brand-pine)]/10 bg-white transition-all hover:-translate-y-0.5 hover:border-[var(--brand-gold)]/35 hover:shadow-md">
+                <CardHeader className="pb-3 text-center sm:text-left">
+                  <CardTitle className="text-lg leading-snug text-[var(--brand-pine)]">
+                    {p.name}
+                  </CardTitle>
+                  {p.description?.trim() ? (
+                    <CardDescription className="mt-2 line-clamp-4 whitespace-pre-line">
+                      {p.description.trim()}
+                    </CardDescription>
+                  ) : null}
+                </CardHeader>
+                <CardContent className="mt-auto flex flex-col items-center gap-3 pt-0 sm:items-stretch">
+                  <div className="text-center sm:text-left">
+                    <p className="text-base font-semibold tabular-nums text-[var(--brand-gold)]">
+                      {nok.format(p.priceOre / 100)} per dusin{" "}
+                      <span className="font-normal text-neutral-600">
+                        {PRICE_EX_VAT_SUFFIX}
                       </span>
-                    ) : null}
-                    <Button
-                      type="button"
-                      disabled={out}
-                      onClick={() => openFor(p)}
-                      className="w-full bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
-                    >
-                      {out ? "Utsolgt" : "Bestill"}
-                    </Button>
-                  </CardContent>
-                </Card>
-              </li>
-            );
-          })
+                    </p>
+                    <p className="mt-0.5 text-xs text-neutral-500">
+                      {VAT_HINT_SHORT}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={() => openFor(p)}
+                    className="w-full bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
+                  >
+                    Bestill
+                  </Button>
+                </CardContent>
+              </Card>
+            </li>
+          ))
         )}
       </ul>
 
@@ -287,7 +247,7 @@ export function LagShopClient() {
                 </DialogTitle>
                 <DialogDescription>
                   {nok.format(dialogProduct.priceOre / 100)} per dusin{" "}
-                  {PRICE_EX_VAT_SUFFIX} · min. {dialogProduct.minOrderQty} dusin.
+                  {PRICE_EX_VAT_SUFFIX}
                   <span className="mt-1 block text-xs text-neutral-500">
                     {VAT_HINT_SHORT}
                   </span>
@@ -295,20 +255,22 @@ export function LagShopClient() {
               </DialogHeader>
 
               <div className="flex flex-col gap-4 py-2">
+                {dialogProduct.description?.trim() ? (
+                  <p className="whitespace-pre-line text-sm text-neutral-700">
+                    {dialogProduct.description.trim()}
+                  </p>
+                ) : null}
+
                 <div className="space-y-2">
                   <Label htmlFor="qty">Antall dusin</Label>
                   <Input
                     id="qty"
                     type="number"
-                    min={dialogProduct.minOrderQty}
+                    min={1}
                     value={quantity}
                     onChange={(e) =>
                       setQuantity(
-                        Math.max(
-                          dialogProduct.minOrderQty,
-                          Math.floor(Number(e.target.value)) ||
-                            dialogProduct.minOrderQty
-                        )
+                        Math.max(1, Math.floor(Number(e.target.value)) || 1)
                       )
                     }
                   />

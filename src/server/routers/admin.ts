@@ -9,7 +9,6 @@ import {
   adminProductFormSchema,
   adminProductUpdateSchema,
 } from "@/lib/shop/product-zod";
-import { supplierDisplayLine } from "@/lib/shop/catalog-labels";
 import { randomSlugSuffix, slugifyName } from "@/lib/slug";
 import {
   campaigns,
@@ -472,7 +471,6 @@ export const adminRouter = router({
   createProduct: adminProcedure
     .input(adminProductFormSchema)
     .mutation(async ({ input }) => {
-      const now = new Date().toISOString();
       const base = slugifyName(input.name);
       let slug = base;
       let slugOk = false;
@@ -495,30 +493,13 @@ export const adminRouter = router({
         });
       }
 
-      const supplierOther =
-        input.supplierKey === "other"
-          ? (input.supplierOther?.trim() ?? null)
-          : null;
-
       await db.insert(products).values({
         name: input.name.trim(),
         slug,
         description: input.description?.trim() || null,
-        emoji: input.emoji?.trim() || null,
-        imageStoragePath: input.imageStoragePath?.trim() || null,
-        category: input.category,
         priceOre: input.priceKr * 100,
-        purchasePriceOre:
-          input.purchasePriceKr != null ? input.purchasePriceKr * 100 : null,
-        supplier: supplierDisplayLine(input.supplierKey, supplierOther),
-        supplierKey: input.supplierKey,
-        supplierOther,
-        allowsLogoPrint: input.allowsLogoPrint,
-        minOrderQty: input.minOrderQty,
-        deliveryTimeText: input.deliveryTimeText?.trim() || null,
-        stockStatus: input.stockStatus,
+        supplier: input.supplier.trim(),
         isActive: input.isActive,
-        updatedAt: now,
       });
 
       return { ok: true as const };
@@ -527,7 +508,6 @@ export const adminRouter = router({
   updateProduct: adminProcedure
     .input(adminProductUpdateSchema)
     .mutation(async ({ input }) => {
-      const now = new Date().toISOString();
       const [existing] = await db
         .select({ id: products.id })
         .from(products)
@@ -541,31 +521,14 @@ export const adminRouter = router({
         });
       }
 
-      const supplierOther =
-        input.supplierKey === "other"
-          ? (input.supplierOther?.trim() ?? null)
-          : null;
-
       await db
         .update(products)
         .set({
           name: input.name.trim(),
           description: input.description?.trim() || null,
-          emoji: input.emoji?.trim() || null,
-          imageStoragePath: input.imageStoragePath?.trim() || null,
-          category: input.category,
           priceOre: input.priceKr * 100,
-          purchasePriceOre:
-            input.purchasePriceKr != null ? input.purchasePriceKr * 100 : null,
-          supplier: supplierDisplayLine(input.supplierKey, supplierOther),
-          supplierKey: input.supplierKey,
-          supplierOther,
-          allowsLogoPrint: input.allowsLogoPrint,
-          minOrderQty: input.minOrderQty,
-          deliveryTimeText: input.deliveryTimeText?.trim() || null,
-          stockStatus: input.stockStatus,
+          supplier: input.supplier.trim(),
           isActive: input.isActive,
-          updatedAt: now,
         })
         .where(eq(products.id, input.id));
 

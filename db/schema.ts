@@ -188,30 +188,10 @@ export const products = pgTable(
     name: text("name").notNull(),
     slug: text("slug").notNull(),
     description: text("description"),
-    /** Enkelt emoji-tegn som hurtig visuell (alternativ til bilde). */
-    emoji: text("emoji"),
-    /** Sti i Supabase Storage bucket `product-images`. */
-    imageStoragePath: text("image_storage_path"),
-    /** Kode: profile_clothing | prizes_medals | sports_equipment | outdoor_safety | other */
-    category: text("category").notNull().default("other"),
     priceOre: integer("price_ore").notNull(),
-    /** Innkjøpspris — kun for admin-rapportering. */
-    purchasePriceOre: integer("purchase_price_ore"),
-    /** Lesbar leverandørtekst (synk med supplier_key). */
     supplier: text("supplier"),
-    /** better_workwear | pokalbutikk | promo_nordic | maritim_nabo | other */
-    supplierKey: text("supplier_key").notNull().default("other"),
-    supplierOther: text("supplier_other"),
-    allowsLogoPrint: boolean("allows_logo_print").notNull().default(false),
-    minOrderQty: integer("min_order_qty").notNull().default(1),
-    deliveryTimeText: text("delivery_time_text"),
-    /** in_stock | low_stock | out_of_stock */
-    stockStatus: text("stock_status").notNull().default("in_stock"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
-      .defaultNow()
-      .notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "string" })
       .defaultNow()
       .notNull(),
   },
