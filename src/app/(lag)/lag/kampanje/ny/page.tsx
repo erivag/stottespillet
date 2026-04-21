@@ -18,14 +18,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import { golfProductsConfig } from "@/lib/shop/golf-products-config";
 import { trpc } from "@/lib/trpc/react";
 
 type BrregRow = inferRouterOutputs<AppRouter>["lag"]["findSponsors"]["bedrifter"][number];
 
 type OutreachDraftRow =
   inferRouterOutputs<AppRouter>["lag"]["generateOutreach"]["emails"][number];
-
-const PRICE_VICE_DRIVE_PER_DUSIN_KR = 319;
 
 const GOLF_EXPOSURE_DEFAULT = `Logo på golfballer brukt i turneringer
 hele sesongen. Synlig for alle deltakere.`;
@@ -51,6 +50,9 @@ export default function LagKampanjeNyPage() {
     useState<CampaignTypeValue>("golfballer_logo");
   const [amountKr, setAmountKr] = useState("");
   const [dozensStr, setDozensStr] = useState("6");
+  const [golfBallName, setGolfBallName] = useState<string>(
+    golfProductsConfig[0].name
+  );
   const [eventDate, setEventDate] = useState("");
   const [exposureDescription, setExposureDescription] = useState(
     GOLF_EXPOSURE_DEFAULT
@@ -83,10 +85,25 @@ export default function LagKampanjeNyPage() {
     return Number.isFinite(n) ? Math.floor(n) : 0;
   }, [dozensStr]);
 
+  const selectedGolfProduct = useMemo(() => {
+    const hit = golfProductsConfig.find((g) => g.name === golfBallName);
+    return hit ?? golfProductsConfig[0];
+  }, [golfBallName]);
+
+  const golfPricePerDusinKr = useMemo(
+    () => Math.round(selectedGolfProduct.priceOre / 100),
+    [selectedGolfProduct]
+  );
+
   const golfAmountKr = useMemo(() => {
     if (dozensNum < 6) return 0;
-    return dozensNum * PRICE_VICE_DRIVE_PER_DUSIN_KR;
-  }, [dozensNum]);
+    return dozensNum * golfPricePerDusinKr;
+  }, [dozensNum, golfPricePerDusinKr]);
+
+  const golfInklMvaKr = useMemo(
+    () => Math.round(golfAmountKr * 1.25),
+    [golfAmountKr]
+  );
 
   const selectedList = useMemo(
     () => Object.values(selected),
@@ -117,6 +134,7 @@ export default function LagKampanjeNyPage() {
     if (next === "golfballer_logo") {
       setExposureDescription(GOLF_EXPOSURE_DEFAULT);
       setDozensStr((d) => (Number(d) >= 6 ? d : "6"));
+      setGolfBallName(golfProductsConfig[0].name);
     }
   }
 
@@ -147,6 +165,7 @@ export default function LagKampanjeNyPage() {
           title: title.trim(),
           campaignType: "golfballer_logo",
           quantityDusin: dozensNum,
+          golfPricePerDusinKr,
           exposureDescription: exposureDescription.trim(),
           eventDate: eventDate.trim() || null,
         });
@@ -398,9 +417,28 @@ export default function LagKampanjeNyPage() {
                     className="border-[var(--brand-pine)]/15"
                   />
                   <p className="text-xs text-neutral-500">
-                    Minimum 6 dusin. Pris: {PRICE_VICE_DRIVE_PER_DUSIN_KR} kr per
-                    dusin (Vice Drive), beregnet automatisk.
+                    Minimum 6 dusin. Beløp beregnes fra valgt ball-modell.
                   </p>
+                </div>
+              ) : null}
+
+              {isGolf ? (
+                <div className="space-y-2">
+                  <Label htmlFor="ballmodell">Velg ball-modell</Label>
+                  <select
+                    id="ballmodell"
+                    required
+                    value={golfBallName}
+                    onChange={(e) => setGolfBallName(e.target.value)}
+                    className="border-input flex h-10 w-full rounded-md border bg-background px-3 text-sm"
+                  >
+                    {golfProductsConfig.map((g) => (
+                      <option key={g.name} value={g.name}>
+                        {g.name} – kr {Math.round(g.priceOre / 100)}/dusin eks
+                        MVA
+                      </option>
+                    ))}
+                  </select>
                 </div>
               ) : null}
 
@@ -410,10 +448,21 @@ export default function LagKampanjeNyPage() {
                     Beløp søkt (beregnet)
                   </p>
                   <p className="tabular-nums text-neutral-800">
-                    {dozensNum < 6
-                      ? "— (oppgi minst 6 dusin)"
-                      : `${golfAmountKr.toLocaleString("nb-NO")} kr (${dozensNum} dusin × ${PRICE_VICE_DRIVE_PER_DUSIN_KR} kr)`}
+                    {dozensNum < 6 ? (
+                      "— (oppgi minst 6 dusin)"
+                    ) : (
+                      <>
+                        {golfAmountKr.toLocaleString("nb-NO")} kr eks MVA ·{" "}
+                        {golfInklMvaKr.toLocaleString("nb-NO")} kr ink MVA (25%)
+                      </>
+                    )}
                   </p>
+                  {dozensNum >= 6 ? (
+                    <p className="mt-1 text-xs text-neutral-600">
+                      {dozensNum} dusin × {golfPricePerDusinKr.toLocaleString("nb-NO")}{" "}
+                      kr ({selectedGolfProduct.name})
+                    </p>
+                  ) : null}
                 </div>
               ) : (
                 <div className="space-y-2">

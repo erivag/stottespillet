@@ -5,6 +5,7 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { campaignTypeLabel } from "@/lib/admin/labels";
+import { golfProductsConfig } from "@/lib/shop/golf-products-config";
 import { generateSponsorEmail } from "@/lib/claude/generate-email";
 import { SPLEIS_TYPES } from "@/lib/catalog/spleis-types";
 import {
@@ -707,6 +708,8 @@ export const lagRouter = router({
           amountKr: z.number().positive().max(50_000_000).optional(),
           /** Antall dusin (golfballer), minst 6. */
           quantityDusin: z.number().int().min(6).max(10_000).optional(),
+          /** Salgspris per dusin eks. MVA — må matche en ball i katalogen. */
+          golfPricePerDusinKr: z.number().int().positive().max(1_000_000).optional(),
           eventDate: z.string().optional().nullable(),
           exposureDescription: z
             .string()
@@ -720,6 +723,19 @@ export const lagRouter = router({
                 code: z.ZodIssueCode.custom,
                 message: "Oppgi antall dusin.",
                 path: ["quantityDusin"],
+              });
+            }
+            const allowed = new Set(
+              golfProductsConfig.map((g) => Math.round(g.priceOre / 100))
+            );
+            if (
+              data.golfPricePerDusinKr == null ||
+              !allowed.has(data.golfPricePerDusinKr)
+            ) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Velg en gyldig ball-modell.",
+                path: ["golfPricePerDusinKr"],
               });
             }
           } else if (data.amountKr == null || data.amountKr <= 0) {
@@ -745,10 +761,9 @@ export const lagRouter = router({
         });
       }
 
-      const PRICE_VICE_DRIVE_PER_DUSIN_KR = 319;
       const isGolf = input.campaignType === "golfballer_logo";
       const amountKr = isGolf
-        ? (input.quantityDusin ?? 0) * PRICE_VICE_DRIVE_PER_DUSIN_KR
+        ? (input.quantityDusin ?? 0) * (input.golfPricePerDusinKr ?? 0)
         : (input.amountKr ?? 0);
       const quantity = isGolf ? (input.quantityDusin ?? null) : null;
 
