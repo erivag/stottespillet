@@ -8,9 +8,10 @@ export default function LagShopPage() {
           Golfball-shop
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-neutral-600 sm:text-base">
-          Priser er veiledende per dusin (12 baller) inkl. logo-trykk hos Promo
-          Nordic. Velg modell og send forespørsel – vi registrerer ordren og
-          svarer laget.
+          Priser er veiledende per dusin (12 baller) ekskl. merverdiavgift,
+          inkl. logo-trykk hos Promo Nordic. MVA 25 % kommer i tillegg (vises i
+          bestillingsvinduet). Velg modell og send forespørsel – vi registrerer
+          ordren og svarer laget.
         </p>
       </header>
 

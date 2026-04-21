@@ -15,9 +15,11 @@ export type AdminDirectOrderEmailPayload = {
   phone: string;
   ballName: string;
   dozens: number;
-  unitPriceKrPerDusin: number;
+  unitPriceKrPerDusinExVat: number;
   discountRate: number;
-  totalKr: number;
+  totalNetKr: number;
+  mvaKr: number;
+  totalInklMvaKr: number;
   imprintText: string;
   comment: string | null;
   logoAttachment:
@@ -60,10 +62,16 @@ export async function sendAdminDirectOrderNotification(
   <hr/>
   <p><strong>Ball:</strong> ${escHtml(payload.ballName)}</p>
   <p><strong>Antall:</strong> ${payload.dozens} dusin</p>
-  <p><strong>Pris:</strong> ${payload.unitPriceKrPerDusin} kr per dusin</p>
-  <p><strong>Total pris:</strong> ${escHtml(
-    `${Math.round(payload.totalKr).toLocaleString("nb-NO")} kr`
-  )}${discountPct > 0 ? ` (inkl. ${discountPct}% rabatt)` : ""}</p>
+  <p><strong>Pris per dusin (eks. MVA):</strong> ${payload.unitPriceKrPerDusinExVat} kr</p>
+  <p><strong>Pris eks. MVA (etter rabatt):</strong> ${escHtml(
+    `${Math.round(payload.totalNetKr).toLocaleString("nb-NO")} kr`
+  )}${discountPct > 0 ? ` (volumrabatt ${discountPct}%)` : ""}</p>
+  <p><strong>MVA (25%):</strong> ${escHtml(
+    `${Math.round(payload.mvaKr).toLocaleString("nb-NO")} kr`
+  )}</p>
+  <p><strong>Total inkl. MVA:</strong> ${escHtml(
+    `${Math.round(payload.totalInklMvaKr).toLocaleString("nb-NO")} kr`
+  )}</p>
   <p><strong>Logo/tekst:</strong><br/>${escHtml(payload.imprintText).replace(/\n/g, "<br/>")}</p>
   ${
     payload.comment

@@ -13,6 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
+import {
+  grossOreFromNetOre,
+  mvaOreFromNetOre,
+  PRICE_EX_VAT_SUFFIX,
+  VAT_HINT_SHORT,
+} from "@/lib/pricing/norwegian-vat";
+
+import { golfProducts } from "@/lib/shop/seed-golf-products";
+
 import { submitDirectOrder, type DirectOrderFormState } from "./actions";
 
 const BALL_OPTIONS = [
@@ -27,17 +36,9 @@ const BALL_OPTIONS = [
   "Titleist Pro V1",
 ] as const;
 
-const BALL_PRICES_KR_PER_DUSIN = {
-  "Vice Drive": 319,
-  "Vice Tour": 473,
-  "Callaway Super Soft": 429,
-  "Callaway Chrome Soft": 759,
-  "Titleist True Feel": 407,
-  "Titleist Velocity": 462,
-  "Titleist Tour Soft": 506,
-  "Titleist Pro V1x": 759,
-  "Titleist Pro V1": 759,
-} as const satisfies Record<(typeof BALL_OPTIONS)[number], number>;
+const BALL_PRICES_KR_EX_VAT_PER_DUSIN = Object.fromEntries(
+  golfProducts.map((p) => [p.name, p.priceOre / 100])
+) as Record<(typeof BALL_OPTIONS)[number], number>;
 
 const kr = new Intl.NumberFormat("nb-NO", {
   style: "currency",
@@ -78,20 +79,22 @@ export default function BestillPage() {
   const [dozens, setDozens] = useState<number>(6);
   const [logoFileName, setLogoFileName] = useState<string | null>(null);
 
-  const priceKrPerDusin = BALL_PRICES_KR_PER_DUSIN[ballName];
-  const subtotalKr = useMemo(() => {
+  const priceKrExVatPerDusin = BALL_PRICES_KR_EX_VAT_PER_DUSIN[ballName];
+  const subtotalOre = useMemo(() => {
     const safeDozens = Number.isFinite(dozens) ? dozens : 0;
-    return priceKrPerDusin * Math.max(0, safeDozens);
-  }, [dozens, priceKrPerDusin]);
+    return priceKrExVatPerDusin * 100 * Math.max(0, safeDozens);
+  }, [dozens, priceKrExVatPerDusin]);
   const discountRate = useMemo(
     () => discountRateForDozens(dozens),
     [dozens]
   );
-  const discountKr = useMemo(() => {
+  const discountOre = useMemo(() => {
     if (discountRate <= 0) return 0;
-    return Math.round(subtotalKr * discountRate);
-  }, [discountRate, subtotalKr]);
-  const totalKr = subtotalKr - discountKr;
+    return Math.round(subtotalOre * discountRate);
+  }, [discountRate, subtotalOre]);
+  const totalNetOre = subtotalOre - discountOre;
+  const mvaOre = mvaOreFromNetOre(totalNetOre);
+  const totalInklMvaOre = grossOreFromNetOre(totalNetOre);
 
   return (
     <div className="min-h-dvh bg-[#f7f5f0] text-neutral-900">
@@ -119,7 +122,8 @@ export default function BestillPage() {
           </h1>
           <p className="text-sm text-neutral-600 sm:text-base">
             Ingen Stripe. Faktura sendes manuelt etter at vi har bekreftet
-            detaljer.
+            detaljer. Alle priser er for bedrifter, vist eksklusiv merverdiavgift
+            (25 %).
           </p>
         </div>
 
@@ -221,7 +225,8 @@ export default function BestillPage() {
                     >
                       {BALL_OPTIONS.map((o) => (
                         <option key={o} value={o}>
-                          {o} – {kr.format(BALL_PRICES_KR_PER_DUSIN[o])}/dusin
+                          {o} – {kr.format(BALL_PRICES_KR_EX_VAT_PER_DUSIN[o])}
+                          /dusin {PRICE_EX_VAT_SUFFIX}
                         </option>
                       ))}
                     </select>
@@ -229,11 +234,14 @@ export default function BestillPage() {
                     <div className="rounded-lg border border-[#0A2E1A]/10 bg-[#f7f5f0]/70 p-4 text-sm text-neutral-700">
                       <div className="grid gap-2">
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-neutral-600">Pris per dusin</span>
+                          <span className="text-neutral-600">
+                            Pris per dusin ({PRICE_EX_VAT_SUFFIX})
+                          </span>
                           <span className="font-medium text-[#0A2E1A]">
-                            {kr.format(priceKrPerDusin)}
+                            {kr.format(priceKrExVatPerDusin)}
                           </span>
                         </div>
+                        <p className="text-xs text-neutral-500">{VAT_HINT_SHORT}</p>
                         <div className="flex items-center justify-between gap-4">
                           <span className="text-neutral-600">Antall dusin</span>
                           <span className="font-medium text-[#0A2E1A]">
@@ -241,9 +249,11 @@ export default function BestillPage() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between gap-4">
-                          <span className="text-neutral-600">Delsum</span>
+                          <span className="text-neutral-600">
+                            Delsum ({PRICE_EX_VAT_SUFFIX})
+                          </span>
                           <span className="font-medium text-[#0A2E1A]">
-                            {kr.format(subtotalKr)}
+                            {kr.format(subtotalOre / 100)}
                           </span>
                         </div>
                         {discountRate > 0 ? (
@@ -252,15 +262,29 @@ export default function BestillPage() {
                               Rabatt ({Math.round(discountRate * 100)}%)
                             </span>
                             <span className="font-medium text-[#0A2E1A]">
-                              − {kr.format(discountKr)}
+                              − {kr.format(discountOre / 100)}
                             </span>
                           </div>
                         ) : null}
                         <div className="h-px bg-[#0A2E1A]/10" />
                         <div className="flex items-center justify-between gap-4">
-                          <span className="font-medium text-[#0A2E1A]">Total</span>
+                          <span className="text-neutral-600">Pris eks. MVA</span>
+                          <span className="font-medium text-[#0A2E1A]">
+                            {kr.format(totalNetOre / 100)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-neutral-600">MVA (25%)</span>
+                          <span className="font-medium text-[#0A2E1A]">
+                            {kr.format(mvaOre / 100)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="font-medium text-[#0A2E1A]">
+                            Total inkl. MVA
+                          </span>
                           <span className="font-heading text-base font-semibold text-[#0A2E1A]">
-                            {kr.format(totalKr)}
+                            {kr.format(totalInklMvaOre / 100)}
                           </span>
                         </div>
                       </div>

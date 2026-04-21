@@ -22,6 +22,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  grossOreFromNetOre,
+  mvaOreFromNetOre,
+  PRICE_EX_VAT_SUFFIX,
+  VAT_HINT_SHORT,
+} from "@/lib/pricing/norwegian-vat";
 import { stockStatusNb } from "@/lib/shop/catalog-labels";
 import {
   dozenVolumeDiscountPercent,
@@ -73,10 +79,20 @@ export function LagShopClient() {
     return subtotalOreForDozenOrder(dialogProduct.priceOre, quantity);
   }, [dialogProduct, quantity]);
 
-  const totalOre = useMemo(() => {
+  const totalNetOre = useMemo(() => {
     if (!dialogProduct) return 0;
     return totalOreForDozenOrder(dialogProduct.priceOre, quantity);
   }, [dialogProduct, quantity]);
+
+  const mvaOre = useMemo(
+    () => mvaOreFromNetOre(totalNetOre),
+    [totalNetOre]
+  );
+
+  const totalInklMvaOre = useMemo(
+    () => grossOreFromNetOre(totalNetOre),
+    [totalNetOre]
+  );
 
   function openFor(p: ShopProduct) {
     setDialogProduct(p);
@@ -181,9 +197,17 @@ export function LagShopClient() {
                     </div>
                   </CardHeader>
                   <CardContent className="mt-auto flex flex-col items-center gap-3 pt-0 sm:items-stretch">
-                    <p className="text-center text-base font-semibold tabular-nums text-[var(--brand-gold)] sm:text-left">
-                      {nok.format(p.priceOre / 100)} per dusin
-                    </p>
+                    <div className="text-center sm:text-left">
+                      <p className="text-base font-semibold tabular-nums text-[var(--brand-gold)]">
+                        {nok.format(p.priceOre / 100)} per dusin{" "}
+                        <span className="font-normal text-neutral-600">
+                          {PRICE_EX_VAT_SUFFIX}
+                        </span>
+                      </p>
+                      <p className="mt-0.5 text-xs text-neutral-500">
+                        {VAT_HINT_SHORT}
+                      </p>
+                    </div>
                     {p.allowsLogoPrint ? (
                       <span className="mx-auto w-fit rounded-full border border-[var(--brand-gold)]/50 bg-[var(--brand-gold)]/15 px-3 py-1 text-xs font-medium text-[var(--brand-pine)] sm:mx-0">
                         Logo-trykk inkludert
@@ -262,8 +286,11 @@ export function LagShopClient() {
                   {dialogProduct.name}
                 </DialogTitle>
                 <DialogDescription>
-                  {nok.format(dialogProduct.priceOre / 100)} per dusin · min.{" "}
-                  {dialogProduct.minOrderQty} dusin.
+                  {nok.format(dialogProduct.priceOre / 100)} per dusin{" "}
+                  {PRICE_EX_VAT_SUFFIX} · min. {dialogProduct.minOrderQty} dusin.
+                  <span className="mt-1 block text-xs text-neutral-500">
+                    {VAT_HINT_SHORT}
+                  </span>
                 </DialogDescription>
               </DialogHeader>
 
@@ -312,7 +339,7 @@ export function LagShopClient() {
 
                 <div className="space-y-1 text-sm tabular-nums text-[var(--brand-pine)]">
                   <p>
-                    Sum før rabatt:{" "}
+                    Sum før rabatt ({PRICE_EX_VAT_SUFFIX}):{" "}
                     <span className="font-medium">
                       {nok.format(subtotalOre / 100)}
                     </span>
@@ -321,12 +348,27 @@ export function LagShopClient() {
                     <p>
                       Rabatt ({discountPct}%):{" "}
                       <span className="font-medium">
-                        −{nok.format((subtotalOre - totalOre) / 100)}
+                        −{nok.format((subtotalOre - totalNetOre) / 100)}
                       </span>
                     </p>
                   ) : null}
+                  <p>
+                    Pris eks. MVA:{" "}
+                    <span className="font-medium">
+                      {nok.format(totalNetOre / 100)}
+                    </span>
+                  </p>
+                  <p>
+                    MVA (25%):{" "}
+                    <span className="font-medium">
+                      {nok.format(mvaOre / 100)}
+                    </span>
+                  </p>
                   <p className="font-semibold">
-                    Estimert total: {nok.format(totalOre / 100)}
+                    Total inkl. MVA: {nok.format(totalInklMvaOre / 100)}
+                  </p>
+                  <p className="text-xs font-normal text-neutral-500">
+                    {VAT_HINT_SHORT}
                   </p>
                 </div>
 

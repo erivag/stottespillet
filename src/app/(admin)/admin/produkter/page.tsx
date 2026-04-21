@@ -114,10 +114,10 @@ export default function AdminProdukterPage() {
                   Kategori
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Pris
+                  Pris (eks. MVA)
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Innkjøp
+                  Innkjøp (eks. MVA)
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                   Leverandør
@@ -170,12 +170,22 @@ export default function AdminProdukterPage() {
                       {productCategoryNb(row.category)}
                     </td>
                     <td className="px-4 py-3 tabular-nums">
-                      {nok.format(row.priceOre / 100)}
+                      {nok.format(row.priceOre / 100)}{" "}
+                      <span className="text-xs font-normal text-neutral-500">
+                        eks. MVA
+                      </span>
                     </td>
                     <td className="px-4 py-3 tabular-nums text-neutral-600">
-                      {row.purchasePriceOre != null
-                        ? nok.format(row.purchasePriceOre / 100)
-                        : "—"}
+                      {row.purchasePriceOre != null ? (
+                        <>
+                          {nok.format(row.purchasePriceOre / 100)}{" "}
+                          <span className="text-xs text-neutral-500">
+                            eks. MVA
+                          </span>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="max-w-[160px] truncate px-4 py-3 text-neutral-600">
                       {supplierDisplayLine(

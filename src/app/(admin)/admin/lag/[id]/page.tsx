@@ -167,7 +167,10 @@ export default function AdminLagDetailPage() {
               >
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="tabular-nums font-medium text-[var(--brand-pine)]">
-                    {nok.format(ord.totalOre / 100)}
+                    {nok.format(ord.totalOre / 100)}{" "}
+                    <span className="text-xs font-normal text-neutral-500">
+                      eks. MVA
+                    </span>
                   </span>
                   <span className="text-xs">{orderStatusNb(ord.status)}</span>
                 </div>

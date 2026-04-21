@@ -8,6 +8,10 @@ import { SPLEIS_TYPES } from "@/lib/catalog/spleis-types";
 import { searchBrreg } from "@/lib/brreg/search";
 import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
+import {
+  grossOreFromNetOre,
+  mvaOreFromNetOre,
+} from "@/lib/pricing/norwegian-vat";
 import { sendAdminOrderNotification } from "@/lib/resend/send-admin-order-notification";
 import { sendShopBookingEmails } from "@/lib/resend/send-shop-booking-emails";
 import { supplierDisplayLine } from "@/lib/shop/catalog-labels";
@@ -241,7 +245,7 @@ export const lagRouter = router({
         id: `o-${o.id}`,
         kind: "order" as const,
         title: "Produktordre",
-        detail: `${orderStatusLabel(o.status)} · ${(o.totalOre / 100).toLocaleString("nb-NO")} kr`,
+        detail: `${orderStatusLabel(o.status)} · ${(o.totalOre / 100).toLocaleString("nb-NO")} kr eks. MVA`,
         occurredAt: o.updatedAt,
       })),
     ];
@@ -951,9 +955,12 @@ export const lagRouter = router({
           maximumFractionDigits: 0,
         }).format(ore / 100);
 
-      const totalKrFormatted = kr(totalOre);
+      const totalNetKrFormatted = kr(totalOre);
       const subtotalKrFormatted = kr(subtotalOre);
       const unitPriceKrFormatted = kr(unitPriceOre);
+      const mvaOre = mvaOreFromNetOre(totalOre);
+      const mvaKrFormatted = kr(mvaOre);
+      const totalInklMvaKrFormatted = kr(grossOreFromNetOre(totalOre));
       const supplierLine = supplierDisplayLine(
         product.supplierKey,
         product.supplierOther,
@@ -969,7 +976,9 @@ export const lagRouter = router({
           unitPriceKrFormatted,
           discountPercent: discountPct,
           subtotalKrFormatted,
-          totalKrFormatted,
+          totalNetKrFormatted,
+          mvaKrFormatted,
+          totalInklMvaKrFormatted,
           supplierNotes: combinedNotes,
           supplierLine,
         });
@@ -983,7 +992,9 @@ export const lagRouter = router({
           contactEmail: ctx.user.email ?? "(ikke tilgjengelig)",
           productName: product.name,
           quantity: input.quantity,
-          totalKrFormatted,
+          totalNetKrFormatted,
+          mvaKrFormatted,
+          totalInklMvaKrFormatted,
           deliveryAddress: deliveryLine,
           supplierNotes: combinedNotes,
           logoStoragePath: null,

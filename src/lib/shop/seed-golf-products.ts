@@ -9,6 +9,7 @@ import { supplierDisplayLine } from "./catalog-labels";
 export type GolfProductSeed = {
   name: string;
   emoji: string;
+  /** List price per dozen in øre, excluding Norwegian VAT (25%). */
   priceOre: number;
   supplier: string;
   minQty: number;
@@ -22,7 +23,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Vice Drive",
     emoji: "⛳",
-    priceOre: 31900,
+    priceOre: 25500,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -33,7 +34,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Vice Tour",
     emoji: "⛳",
-    priceOre: 47300,
+    priceOre: 37800,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -43,7 +44,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Callaway Super Soft",
     emoji: "⛳",
-    priceOre: 42900,
+    priceOre: 34300,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -53,7 +54,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Callaway Chrome Soft",
     emoji: "⛳",
-    priceOre: 75900,
+    priceOre: 60700,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -63,7 +64,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Titleist True Feel",
     emoji: "⛳",
-    priceOre: 40700,
+    priceOre: 29600,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -73,7 +74,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Titleist Velocity",
     emoji: "⛳",
-    priceOre: 46200,
+    priceOre: 37000,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -83,7 +84,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Titleist Tour Soft",
     emoji: "⛳",
-    priceOre: 50600,
+    priceOre: 40500,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -93,7 +94,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Titleist Pro V1x",
     emoji: "⛳",
-    priceOre: 75900,
+    priceOre: 60700,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",
@@ -104,7 +105,7 @@ export const golfProducts: GolfProductSeed[] = [
   {
     name: "Titleist Pro V1",
     emoji: "⛳",
-    priceOre: 75900,
+    priceOre: 60700,
     supplier: "Promo Nordic",
     minQty: 6,
     deliveryDays: "10-14 dager",

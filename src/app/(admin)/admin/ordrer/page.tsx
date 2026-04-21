@@ -59,7 +59,7 @@ export default function AdminOrdrerPage() {
                   Antall
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                  Beløp
+                  Beløp (eks. MVA)
                 </th>
                 <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                   Status
@@ -85,7 +85,10 @@ export default function AdminOrdrerPage() {
                     {row.quantity}
                   </td>
                   <td className="px-4 py-3 tabular-nums">
-                    {nok.format(row.totalOre / 100)}
+                    {nok.format(row.totalOre / 100)}{" "}
+                    <span className="text-xs font-normal text-neutral-500">
+                      eks. MVA
+                    </span>
                   </td>
                   <td className="px-4 py-3">
                     <span

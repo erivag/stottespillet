@@ -15,7 +15,10 @@ export type AdminOrderEmailPayload = {
   contactEmail: string;
   productName: string;
   quantity: number;
-  totalKrFormatted: string;
+  /** Line total after volume discount, excluding VAT. */
+  totalNetKrFormatted: string;
+  mvaKrFormatted: string;
+  totalInklMvaKrFormatted: string;
   deliveryAddress: string;
   supplierNotes: string | null;
   logoStoragePath: string | null;
@@ -54,7 +57,9 @@ export async function sendAdminOrderNotification(
   <p><strong>Kontakt (innlogget):</strong> ${escHtml(payload.contactEmail)}</p>
   <p><strong>Produkt:</strong> ${escHtml(payload.productName)}</p>
   <p><strong>Antall (dusin):</strong> ${payload.quantity}</p>
-  <p><strong>Totalt:</strong> ${escHtml(payload.totalKrFormatted)}</p>
+  <p><strong>Pris eks. MVA (etter rabatt):</strong> ${escHtml(payload.totalNetKrFormatted)}</p>
+  <p><strong>MVA (25%):</strong> ${escHtml(payload.mvaKrFormatted)}</p>
+  <p><strong>Total inkl. MVA:</strong> ${escHtml(payload.totalInklMvaKrFormatted)}</p>
   <p><strong>Leverandør (produkt):</strong> ${escHtml(payload.supplierLine)}</p>
   <p><strong>Leveringsadresse:</strong><br/>${escHtml(payload.deliveryAddress).replace(/\n/g, "<br/>")}</p>
   ${

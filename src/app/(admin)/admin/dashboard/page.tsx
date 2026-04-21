@@ -194,7 +194,7 @@ export default function AdminDashboardPage() {
                       Produkt
                     </th>
                     <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
-                      Beløp
+                      Beløp (eks. MVA)
                     </th>
                     <th className="px-4 py-3 font-medium text-[var(--brand-pine)]">
                       Status
@@ -214,7 +214,10 @@ export default function AdminDashboardPage() {
                         {o.productLabel ?? "—"}
                       </td>
                       <td className="px-4 py-3 tabular-nums text-neutral-700">
-                        {nok.format(o.totalOre / 100)}
+                        {nok.format(o.totalOre / 100)}{" "}
+                        <span className="text-xs font-normal text-neutral-500">
+                          eks. MVA
+                        </span>
                       </td>
                       <td className="px-4 py-3">
                         <span className="rounded-full border border-[var(--brand-pine)]/15 bg-[var(--brand-cream)] px-2 py-0.5 text-xs font-medium text-[var(--brand-pine)]">

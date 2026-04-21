@@ -3,7 +3,12 @@
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import {
+  grossOreFromNetOre,
+  mvaOreFromNetOre,
+} from "@/lib/pricing/norwegian-vat";
 import { sendAdminDirectOrderNotification } from "@/lib/resend/send-admin-direct-order-notification";
+import { golfProducts } from "@/lib/shop/seed-golf-products";
 import { orders } from "@db/schema";
 
 const golfBallOptions = [
@@ -18,17 +23,9 @@ const golfBallOptions = [
   "Titleist Pro V1",
 ] as const;
 
-const pricesKrPerDusin = {
-  "Vice Drive": 319,
-  "Vice Tour": 473,
-  "Callaway Super Soft": 429,
-  "Callaway Chrome Soft": 759,
-  "Titleist True Feel": 407,
-  "Titleist Velocity": 462,
-  "Titleist Tour Soft": 506,
-  "Titleist Pro V1x": 759,
-  "Titleist Pro V1": 759,
-} as const satisfies Record<(typeof golfBallOptions)[number], number>;
+const pricesKrPerDusinExVat = Object.fromEntries(
+  golfProducts.map((p) => [p.name, p.priceOre / 100])
+) as Record<(typeof golfBallOptions)[number], number>;
 
 const schema = z.object({
   companyName: z.string().min(2).max(200),
@@ -79,11 +76,13 @@ export async function submitDirectOrder(
   }
 
   const v = parsed.data;
-  const unitPriceOre = pricesKrPerDusin[v.ballName] * 100;
+  const unitPriceOre = pricesKrPerDusinExVat[v.ballName] * 100;
   const subtotalOre = unitPriceOre * v.dozens;
   const discountRate = discountRateForDozens(v.dozens);
   const discountOre = Math.round(subtotalOre * discountRate);
-  const totalOre = subtotalOre - discountOre;
+  const totalNetOre = subtotalOre - discountOre;
+  const mvaOre = mvaOreFromNetOre(totalNetOre);
+  const totalOre = totalNetOre;
   const now = new Date().toISOString();
 
   const file = formData.get("logoFile");
@@ -143,9 +142,11 @@ export async function submitDirectOrder(
         phone: v.phone.trim(),
         ballName: v.ballName,
         dozens: v.dozens,
-        unitPriceKrPerDusin: pricesKrPerDusin[v.ballName],
+        unitPriceKrPerDusinExVat: pricesKrPerDusinExVat[v.ballName],
         discountRate,
-        totalKr: totalOre / 100,
+        totalNetKr: totalNetOre / 100,
+        mvaKr: mvaOre / 100,
+        totalInklMvaKr: grossOreFromNetOre(totalNetOre) / 100,
         imprintText: v.imprintText.trim(),
         comment: v.comment?.trim() || null,
         logoAttachment: attachment,

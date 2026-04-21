@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { VAT_HINT_SHORT } from "@/lib/pricing/norwegian-vat";
 import type { AdminProductFormInput } from "@/lib/shop/product-zod";
 import { adminProductFormSchema } from "@/lib/shop/product-zod";
 import {
@@ -230,7 +231,7 @@ export function AdminProductForm(props: Props) {
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="price">Salgspris (kr)</Label>
+          <Label htmlFor="price">Salgspris (kr, eks. MVA)</Label>
           <Input
             id="price"
             type="number"
@@ -244,9 +245,12 @@ export function AdminProductForm(props: Props) {
             }
             className="border-[var(--brand-pine)]/15"
           />
+          <p className="text-xs text-neutral-500">{VAT_HINT_SHORT}</p>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="purchase">Innkjøpspris (kr) — kun admin</Label>
+          <Label htmlFor="purchase">
+            Innkjøpspris (kr, eks. MVA) — kun admin
+          </Label>
           <Input
             id="purchase"
             type="number"
