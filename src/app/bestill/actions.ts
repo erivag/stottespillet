@@ -42,8 +42,21 @@ const schema = z.object({
 });
 
 export type DirectOrderFormState =
-  | { ok: true }
+  | { ok: true; email: string }
   | { ok: false; message: string };
+
+function discountRateForDozens(dozens: number): number {
+  if (dozens >= 100) return 0.15;
+  if (dozens >= 70) return 0.12;
+  if (dozens >= 50) return 0.1;
+  if (dozens >= 30) return 0.05;
+  return 0;
+}
+
+function safeFileName(name: string): string {
+  const trimmed = name.trim();
+  return trimmed.length > 0 ? trimmed.replace(/[^\w.\- ()\[\]]+/g, "_") : "logo";
+}
 
 export async function submitDirectOrder(
   prevState: DirectOrderFormState,
@@ -67,8 +80,36 @@ export async function submitDirectOrder(
 
   const v = parsed.data;
   const unitPriceOre = pricesKrPerDusin[v.ballName] * 100;
-  const totalOre = unitPriceOre * v.dozens;
+  const subtotalOre = unitPriceOre * v.dozens;
+  const discountRate = discountRateForDozens(v.dozens);
+  const discountOre = Math.round(subtotalOre * discountRate);
+  const totalOre = subtotalOre - discountOre;
   const now = new Date().toISOString();
+
+  const file = formData.get("logoFile");
+  let attachment:
+    | { filename: string; content: Buffer; contentType?: string }
+    | null = null;
+
+  if (file instanceof File && file.size > 0) {
+    if (file.size > 10 * 1024 * 1024) {
+      return { ok: false, message: "Logo-filen kan maks være 10MB." };
+    }
+
+    const filename = safeFileName(file.name);
+    const ext = filename.toLowerCase().split(".").pop() ?? "";
+    const allowedExt = new Set(["png", "jpg", "jpeg", "svg", "pdf", "ai"]);
+    if (!allowedExt.has(ext)) {
+      return { ok: false, message: "Ugyldig filtype. Bruk PNG, JPG, SVG, PDF eller AI." };
+    }
+
+    const buf = Buffer.from(await file.arrayBuffer());
+    attachment = {
+      filename,
+      content: buf,
+      contentType: file.type || undefined,
+    };
+  }
 
   try {
     await db.insert(orders).values({
@@ -103,14 +144,17 @@ export async function submitDirectOrder(
         ballName: v.ballName,
         dozens: v.dozens,
         unitPriceKrPerDusin: pricesKrPerDusin[v.ballName],
+        discountRate,
+        totalKr: totalOre / 100,
         imprintText: v.imprintText.trim(),
         comment: v.comment?.trim() || null,
+        logoAttachment: attachment,
       });
     } catch (e) {
       console.error("sendAdminDirectOrderNotification failed", e);
     }
 
-    return { ok: true };
+    return { ok: true, email: v.email.trim() };
   } catch (e) {
     console.error("[bestill.submit] database error", e);
     return {

@@ -76,6 +76,7 @@ export default function BestillPage() {
     BALL_OPTIONS[0]
   );
   const [dozens, setDozens] = useState<number>(6);
+  const [logoFileName, setLogoFileName] = useState<string | null>(null);
 
   const priceKrPerDusin = BALL_PRICES_KR_PER_DUSIN[ballName];
   const subtotalKr = useMemo(() => {
@@ -132,7 +133,14 @@ export default function BestillPage() {
             {state.ok ? (
               <div className="rounded-xl border border-[#0A2E1A]/10 bg-[#f7f5f0]/70 p-6 text-sm text-neutral-700">
                 <p className="font-medium text-[#0A2E1A]">
-                  Takk! Vi tar kontakt innen 1 virkedag.
+                  ✅ Bestilling mottatt!
+                </p>
+                <p className="mt-2">
+                  Vi tar kontakt innen 1 virkedag på{" "}
+                  <span className="font-medium">{state.email}</span>.
+                  <br />
+                  thomas@bodogolfsenter.no og post@utebygg.no har mottatt
+                  bestillingen.
                 </p>
                 <p className="mt-2">
                   Du kan også{" "}
@@ -146,7 +154,11 @@ export default function BestillPage() {
                 </p>
               </div>
             ) : (
-              <form action={formAction} className="space-y-5">
+              <form
+                action={formAction}
+                className="space-y-5"
+                encType="multipart/form-data"
+              >
                 {state.message ? (
                   <p className="text-sm text-red-600">{state.message}</p>
                 ) : null}
@@ -291,6 +303,40 @@ export default function BestillPage() {
                     placeholder="Beskriv logo (f.eks. vedlegg via e-post senere) og/eller ønsket tekst."
                     className="min-h-24"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="logoFile">Last opp logo (valgfritt)</Label>
+                  <Input
+                    id="logoFile"
+                    name="logoFile"
+                    type="file"
+                    accept=".png,.jpg,.jpeg,.svg,.pdf,.ai"
+                    onChange={(e) => {
+                      const f = e.currentTarget.files?.[0] ?? null;
+                      if (!f) {
+                        setLogoFileName(null);
+                        return;
+                      }
+                      if (f.size > 10 * 1024 * 1024) {
+                        setLogoFileName(null);
+                        e.currentTarget.value = "";
+                        return;
+                      }
+                      setLogoFileName(f.name);
+                    }}
+                  />
+                  {logoFileName ? (
+                    <p className="text-xs text-neutral-600">
+                      Valgt fil:{" "}
+                      <span className="font-medium text-[#0A2E1A]">
+                        {logoFileName}
+                      </span>
+                    </p>
+                  ) : null}
+                  <p className="text-xs text-neutral-500">
+                    Vi kontakter deg hvis vi trenger høyere oppløsning
+                  </p>
                 </div>
 
                 <div className="space-y-2">
