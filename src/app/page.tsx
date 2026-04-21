@@ -266,8 +266,11 @@ export default function Home() {
                 <li>✓ Logo på Titleist-baller</li>
                 <li>✓ Nevnt i sosiale medier</li>
                 <li>✓ Støtter lokalt idrettsliv</li>
-                <li>✓ Fra kr 690 per turnering</li>
+                <li>✓ Fra kr 1 914 per turnering (6 dusin × kr 319)</li>
               </ul>
+              <p className="mt-3 text-xs text-neutral-500">
+                Minimum 6 dusin per bestilling
+              </p>
               <Link
                 href="/registrer"
                 className={cn(btnGold, "mt-8 inline-flex w-full sm:w-auto")}
