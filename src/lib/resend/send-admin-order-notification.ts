@@ -53,7 +53,7 @@ export async function sendAdminOrderNotification(
   <p><strong>Lag:</strong> ${escHtml(payload.organizationName)}</p>
   <p><strong>Kontakt (innlogget):</strong> ${escHtml(payload.contactEmail)}</p>
   <p><strong>Produkt:</strong> ${escHtml(payload.productName)}</p>
-  <p><strong>Antall:</strong> ${payload.quantity}</p>
+  <p><strong>Antall (dusin):</strong> ${payload.quantity}</p>
   <p><strong>Totalt:</strong> ${escHtml(payload.totalKrFormatted)}</p>
   <p><strong>Leverandør (produkt):</strong> ${escHtml(payload.supplierLine)}</p>
   <p><strong>Leveringsadresse:</strong><br/>${escHtml(payload.deliveryAddress).replace(/\n/g, "<br/>")}</p>

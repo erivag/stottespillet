@@ -23,6 +23,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { stockStatusNb } from "@/lib/shop/catalog-labels";
+import {
+  dozenVolumeDiscountPercent,
+  subtotalOreForDozenOrder,
+  totalOreForDozenOrder,
+} from "@/lib/shop/volume-discount";
 import { storagePublicObjectUrl } from "@/lib/supabase/storage-public-url";
 import { trpc } from "@/lib/trpc/react";
 
@@ -58,9 +63,19 @@ export function LagShopClient() {
 
   const items = (data?.items ?? []) as ShopProduct[];
 
+  const discountPct = useMemo(
+    () => (dialogProduct ? dozenVolumeDiscountPercent(quantity) : 0),
+    [dialogProduct, quantity]
+  );
+
+  const subtotalOre = useMemo(() => {
+    if (!dialogProduct) return 0;
+    return subtotalOreForDozenOrder(dialogProduct.priceOre, quantity);
+  }, [dialogProduct, quantity]);
+
   const totalOre = useMemo(() => {
     if (!dialogProduct) return 0;
-    return dialogProduct.priceOre * quantity;
+    return totalOreForDozenOrder(dialogProduct.priceOre, quantity);
   }, [dialogProduct, quantity]);
 
   function openFor(p: ShopProduct) {
@@ -159,7 +174,7 @@ export function LagShopClient() {
                         <CardDescription className="mt-2">
                           {stockStatusNb(p.stockStatus)}
                           {p.deliveryTimeText?.trim()
-                            ? ` · Levering ca. ${p.deliveryTimeText.trim()}`
+                            ? ` · Levering: ${p.deliveryTimeText.trim()}`
                             : ""}
                         </CardDescription>
                       </div>
@@ -167,7 +182,7 @@ export function LagShopClient() {
                   </CardHeader>
                   <CardContent className="mt-auto flex flex-col items-center gap-3 pt-0 sm:items-stretch">
                     <p className="text-center text-base font-semibold tabular-nums text-[var(--brand-gold)] sm:text-left">
-                      fra {nok.format(p.priceOre / 100)}
+                      {nok.format(p.priceOre / 100)} per dusin
                     </p>
                     {p.allowsLogoPrint ? (
                       <span className="mx-auto w-fit rounded-full border border-[var(--brand-gold)]/50 bg-[var(--brand-gold)]/15 px-3 py-1 text-xs font-medium text-[var(--brand-pine)] sm:mx-0">
@@ -247,14 +262,14 @@ export function LagShopClient() {
                   {dialogProduct.name}
                 </DialogTitle>
                 <DialogDescription>
-                  Enhetspris {nok.format(dialogProduct.priceOre / 100)} · min.{" "}
-                  {dialogProduct.minOrderQty} stk.
+                  {nok.format(dialogProduct.priceOre / 100)} per dusin · min.{" "}
+                  {dialogProduct.minOrderQty} dusin.
                 </DialogDescription>
               </DialogHeader>
 
               <div className="flex flex-col gap-4 py-2">
                 <div className="space-y-2">
-                  <Label htmlFor="qty">Antall</Label>
+                  <Label htmlFor="qty">Antall dusin</Label>
                   <Input
                     id="qty"
                     type="number"
@@ -272,6 +287,18 @@ export function LagShopClient() {
                   />
                 </div>
 
+                <div className="rounded-lg border border-[var(--brand-pine)]/15 bg-[var(--brand-pine)]/5 px-3 py-2 text-xs text-neutral-700">
+                  <p className="font-medium text-[var(--brand-pine)]">
+                    Volumrabatt (dusin)
+                  </p>
+                  <ul className="mt-1 list-inside list-disc space-y-0.5">
+                    <li>30+ dusin: −5 %</li>
+                    <li>50+ dusin: −10 %</li>
+                    <li>70+ dusin: −12 %</li>
+                    <li>100+ dusin: −15 %</li>
+                  </ul>
+                </div>
+
                 <div className="space-y-2">
                   <Label htmlFor="comment">Kommentar</Label>
                   <Textarea
@@ -279,13 +306,29 @@ export function LagShopClient() {
                     rows={4}
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
-                    placeholder="Valgfritt: størrelser, farger, frist, spesielle ønsker …"
+                    placeholder="Valgfritt: logo, frist, spesielle ønsker …"
                   />
                 </div>
 
-                <p className="text-sm font-semibold tabular-nums text-[var(--brand-pine)]">
-                  Estimert total: {nok.format(totalOre / 100)}
-                </p>
+                <div className="space-y-1 text-sm tabular-nums text-[var(--brand-pine)]">
+                  <p>
+                    Sum før rabatt:{" "}
+                    <span className="font-medium">
+                      {nok.format(subtotalOre / 100)}
+                    </span>
+                  </p>
+                  {discountPct > 0 ? (
+                    <p>
+                      Rabatt ({discountPct}%):{" "}
+                      <span className="font-medium">
+                        −{nok.format((subtotalOre - totalOre) / 100)}
+                      </span>
+                    </p>
+                  ) : null}
+                  <p className="font-semibold">
+                    Estimert total: {nok.format(totalOre / 100)}
+                  </p>
+                </div>
 
                 {formError ? (
                   <p className="text-sm text-destructive">{formError}</p>

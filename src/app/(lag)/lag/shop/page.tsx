@@ -5,11 +5,12 @@ export default function LagShopPage() {
     <div className="flex flex-col gap-8">
       <header>
         <h1 className="font-heading text-2xl font-semibold tracking-tight text-[var(--brand-pine)] sm:text-3xl">
-          Giveaway-shop
+          Golfball-shop
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-neutral-600 sm:text-base">
-          Aktive produkter fra Støttespillet. Priser vises som veiledende
-          «fra»-pris per enhet. Du får bekreftelse når bestillingen er mottatt.
+          Priser er veiledende per dusin (12 baller) inkl. logo-trykk hos Promo
+          Nordic. Velg modell og send forespørsel – vi registrerer ordren og
+          svarer laget.
         </p>
       </header>
 

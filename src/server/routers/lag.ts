@@ -9,7 +9,13 @@ import { searchBrreg } from "@/lib/brreg/search";
 import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
 import { sendAdminOrderNotification } from "@/lib/resend/send-admin-order-notification";
+import { sendShopBookingEmails } from "@/lib/resend/send-shop-booking-emails";
 import { supplierDisplayLine } from "@/lib/shop/catalog-labels";
+import {
+  dozenVolumeDiscountPercent,
+  subtotalOreForDozenOrder,
+  totalOreForDozenOrder,
+} from "@/lib/shop/volume-discount";
 import {
   brregCache,
   campaigns,
@@ -904,10 +910,22 @@ export const lagRouter = router({
       }
 
       const unitPriceOre = product.priceOre;
-      const totalOre = unitPriceOre * input.quantity;
+      const discountPct = dozenVolumeDiscountPercent(input.quantity);
+      const subtotalOre = subtotalOreForDozenOrder(
+        unitPriceOre,
+        input.quantity
+      );
+      const totalOre = totalOreForDozenOrder(unitPriceOre, input.quantity);
       const now = new Date().toISOString();
 
-      const notes = input.supplierNotes?.trim() || null;
+      const userNote = input.supplierNotes?.trim() || null;
+      const metaLines = [
+        userNote,
+        `Antall dusin: ${input.quantity}`,
+        discountPct > 0 ? `Volumrabatt: ${discountPct}%` : null,
+        `Sum før rabatt: ${subtotalOre} øre`,
+      ].filter(Boolean);
+      const combinedNotes = metaLines.join("\n");
       const deliveryLine =
         "Forespørsel via shop – leveringsadresse og logo avtales med laget.";
 
@@ -919,18 +937,45 @@ export const lagRouter = router({
         unitPriceOre,
         logoStoragePath: null,
         deliveryAddress: deliveryLine,
-        supplierNotes: notes,
+        supplierNotes: combinedNotes,
         status: "pending",
         totalOre,
         createdAt: now,
         updatedAt: now,
       });
 
-      const totalKrFormatted = new Intl.NumberFormat("nb-NO", {
-        style: "currency",
-        currency: "NOK",
-        maximumFractionDigits: 0,
-      }).format(totalOre / 100);
+      const kr = (ore: number) =>
+        new Intl.NumberFormat("nb-NO", {
+          style: "currency",
+          currency: "NOK",
+          maximumFractionDigits: 0,
+        }).format(ore / 100);
+
+      const totalKrFormatted = kr(totalOre);
+      const subtotalKrFormatted = kr(subtotalOre);
+      const unitPriceKrFormatted = kr(unitPriceOre);
+      const supplierLine = supplierDisplayLine(
+        product.supplierKey,
+        product.supplierOther,
+        product.supplier
+      );
+
+      try {
+        await sendShopBookingEmails({
+          organizationName: org.name,
+          contactEmail: ctx.user.email ?? "(ikke tilgjengelig)",
+          productName: product.name,
+          dozens: input.quantity,
+          unitPriceKrFormatted,
+          discountPercent: discountPct,
+          subtotalKrFormatted,
+          totalKrFormatted,
+          supplierNotes: combinedNotes,
+          supplierLine,
+        });
+      } catch (e) {
+        console.error("sendShopBookingEmails failed", e);
+      }
 
       try {
         await sendAdminOrderNotification({
@@ -940,13 +985,9 @@ export const lagRouter = router({
           quantity: input.quantity,
           totalKrFormatted,
           deliveryAddress: deliveryLine,
-          supplierNotes: notes,
+          supplierNotes: combinedNotes,
           logoStoragePath: null,
-          supplierLine: supplierDisplayLine(
-            product.supplierKey,
-            product.supplierOther,
-            product.supplier
-          ),
+          supplierLine,
         });
       } catch (e) {
         console.error("sendAdminOrderNotification failed", e);
