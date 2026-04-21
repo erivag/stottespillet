@@ -16,6 +16,24 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+const GOLF_BALL_PRODUCTS = [
+  { name: "Vice Drive", priceKrPerDusin: 319 },
+  { name: "Vice Tour", priceKrPerDusin: 473 },
+  { name: "Callaway Super Soft", priceKrPerDusin: 429 },
+  { name: "Callaway Chrome Soft", priceKrPerDusin: 759 },
+  { name: "Titleist True Feel", priceKrPerDusin: 407 },
+  { name: "Titleist Velocity", priceKrPerDusin: 462 },
+  { name: "Titleist Tour Soft", priceKrPerDusin: 506 },
+  { name: "Titleist Pro V1x", priceKrPerDusin: 759 },
+  { name: "Titleist Pro V1", priceKrPerDusin: 759 },
+] as const;
+
+const kr = new Intl.NumberFormat("nb-NO", {
+  style: "currency",
+  currency: "NOK",
+  maximumFractionDigits: 0,
+});
+
 const STEPS = [
   {
     icon: FileText,
@@ -157,41 +175,52 @@ export default function Home() {
             id="product-heading"
             className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
           >
-            Golfballer med sponsor-logo
+            Velg dine golfballer
           </h2>
+          <p className="mt-3 max-w-2xl text-sm text-neutral-600 sm:text-base">
+            Alle priser er per dusin inkl. logo-trykk og frakt. Minimum 6 dusin
+            per bestilling.
+          </p>
+
+          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {GOLF_BALL_PRODUCTS.map((p) => (
+              <Card
+                key={p.name}
+                className="border-[#0A2E1A]/10 bg-[#f7f5f0]/70 shadow-sm transition-shadow hover:shadow-md"
+              >
+                <CardContent className="flex h-full flex-col gap-2 p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-[#0A2E1A] text-lg text-[#FFBE4A]">
+                      ⛳
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-heading text-base font-semibold leading-snug text-[#0A2E1A]">
+                        {p.name}
+                      </h3>
+                      <p className="mt-1 text-sm font-medium text-[#FFBE4A]">
+                        {kr.format(p.priceKrPerDusin)} / dusin
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-neutral-600">inkl. logo-trykk</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <p className="mt-8 text-sm text-neutral-700">
+            🎯 Volum-rabatter: 30 dusin –5% · 50 dusin –10% · 70 dusin –12% · 100
+            dusin –15%
+          </p>
+
           <div className="mt-10">
-            <Card className="border-[#0A2E1A]/10 bg-[#f7f5f0]/70 shadow-sm">
-              <CardContent className="flex flex-col gap-6 p-6 sm:p-8">
-                <div className="flex items-start gap-4">
-                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#0A2E1A] text-xl text-[#FFBE4A]">
-                    ⛳
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-heading text-xl font-semibold leading-tight text-[#0A2E1A]">
-                      Titleist golfballer m/logo
-                    </h3>
-                    <p className="mt-1 text-sm font-medium text-[#FFBE4A]">
-                      fra kr 690 per 12 stk
-                    </p>
-                  </div>
-                </div>
-
-                <ul className="grid gap-2 text-sm text-neutral-700 sm:grid-cols-2">
-                  <li>Sponsor betaler – klubben bestiller</li>
-                  <li>Leveringstid: 10-14 dager</li>
-                </ul>
-
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                  <Link href="/lag/shop" className={btnGold}>
-                    Bestill til neste turnering
-                    <ArrowRight className="size-4 shrink-0" aria-hidden />
-                  </Link>
-                  <p className="text-xs text-neutral-600">
-                    Krever innlogging.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
+            <Link
+              href="/lag/shop"
+              className={cn(btnGold, "w-full sm:w-auto")}
+            >
+              Bestill til neste turnering →
+              <ArrowRight className="size-4 shrink-0" aria-hidden />
+            </Link>
           </div>
         </div>
       </section>
