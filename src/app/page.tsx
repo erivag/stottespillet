@@ -311,7 +311,7 @@ export default function Home() {
               Sponsorplattform for idrett, komiteer og barnehager.
             </p>
             <p className="mt-3 text-xs text-neutral-500">
-              © 2025 Støttespillet · Driftet av UTEbygg AS i samarbeid med Bodø
+              © 2026 Støttespillet · Driftet av UTEbygg AS i samarbeid med Bodø
               Golfsenter AS
             </p>
           </div>
