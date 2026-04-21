@@ -600,13 +600,44 @@ export const lagRouter = router({
 
   createCampaignDraft: protectedProcedure
     .input(
-      z.object({
-        title: z.string().min(1, "Tittel er påkrevd").max(200),
-        campaignType: z.enum(["turnering", "sesongstart", "drakter", "annet"]),
-        amountKr: z.number().positive().max(50_000_000),
-        eventDate: z.string().optional().nullable(),
-        exposureDescription: z.string().min(1, "Beskriv hva sponsor får").max(4000),
-      })
+      z
+        .object({
+          title: z.string().min(1, "Tittel er påkrevd").max(200),
+          campaignType: z.enum([
+            "golfballer_logo",
+            "turnering",
+            "drakter_utstyr",
+            "cupreise",
+            "sesongstart",
+            "annet_pengestotte",
+          ]),
+          /** Beløp i kr (påkrevd unntatt for golfballer — da beregnes fra dusin). */
+          amountKr: z.number().positive().max(50_000_000).optional(),
+          /** Antall dusin (golfballer), minst 6. */
+          quantityDusin: z.number().int().min(6).max(10_000).optional(),
+          eventDate: z.string().optional().nullable(),
+          exposureDescription: z
+            .string()
+            .min(1, "Beskriv hva sponsor får")
+            .max(4000),
+        })
+        .superRefine((data, ctx) => {
+          if (data.campaignType === "golfballer_logo") {
+            if (data.quantityDusin == null) {
+              ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Oppgi antall dusin.",
+                path: ["quantityDusin"],
+              });
+            }
+          } else if (data.amountKr == null || data.amountKr <= 0) {
+            ctx.addIssue({
+              code: z.ZodIssueCode.custom,
+              message: "Oppgi beløp i kroner.",
+              path: ["amountKr"],
+            });
+          }
+        })
     )
     .mutation(async ({ ctx, input }) => {
       const [org] = await db
@@ -622,8 +653,15 @@ export const lagRouter = router({
         });
       }
 
+      const PRICE_VICE_DRIVE_PER_DUSIN_KR = 319;
+      const isGolf = input.campaignType === "golfballer_logo";
+      const amountKr = isGolf
+        ? (input.quantityDusin ?? 0) * PRICE_VICE_DRIVE_PER_DUSIN_KR
+        : (input.amountKr ?? 0);
+      const quantity = isGolf ? (input.quantityDusin ?? null) : null;
+
       const now = new Date().toISOString();
-      const amountOre = Math.round(input.amountKr * 100);
+      const amountOre = Math.round(amountKr * 100);
       const eventRaw = input.eventDate?.trim();
       const eventDate =
         eventRaw && eventRaw.length > 0
@@ -639,7 +677,7 @@ export const lagRouter = router({
           campaignType: input.campaignType,
           amountOre,
           eventDate,
-          quantity: null,
+          quantity,
           exposureDescription: input.exposureDescription.trim(),
           status: "draft",
           createdAt: now,

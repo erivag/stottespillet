@@ -22,12 +22,21 @@ import { trpc } from "@/lib/trpc/react";
 
 type BrregRow = inferRouterOutputs<AppRouter>["lag"]["findSponsors"]["bedrifter"][number];
 
+const PRICE_VICE_DRIVE_PER_DUSIN_KR = 319;
+
+const GOLF_EXPOSURE_DEFAULT = `Logo på golfballer brukt i turneringer
+hele sesongen. Synlig for alle deltakere.`;
+
 const CAMPAIGN_TYPES = [
-  { value: "turnering", label: "Turnering" },
-  { value: "sesongstart", label: "Sesongstart" },
-  { value: "drakter", label: "Drakter" },
-  { value: "annet", label: "Annet" },
+  { value: "golfballer_logo", label: "Golfballer m/logo" },
+  { value: "turnering", label: "Turnering/cup" },
+  { value: "drakter_utstyr", label: "Drakter og utstyr" },
+  { value: "cupreise", label: "Cupreise" },
+  { value: "sesongstart", label: "Sesongstart/avslutning" },
+  { value: "annet_pengestotte", label: "Annet/pengestøtte" },
 ] as const;
+
+type CampaignTypeValue = (typeof CAMPAIGN_TYPES)[number]["value"];
 
 export default function LagKampanjeNyPage() {
   const router = useRouter();
@@ -36,10 +45,13 @@ export default function LagKampanjeNyPage() {
 
   const [title, setTitle] = useState("");
   const [campaignType, setCampaignType] =
-    useState<(typeof CAMPAIGN_TYPES)[number]["value"]>("turnering");
+    useState<CampaignTypeValue>("golfballer_logo");
   const [amountKr, setAmountKr] = useState("");
+  const [dozensStr, setDozensStr] = useState("6");
   const [eventDate, setEventDate] = useState("");
-  const [exposureDescription, setExposureDescription] = useState("");
+  const [exposureDescription, setExposureDescription] = useState(
+    GOLF_EXPOSURE_DEFAULT
+  );
 
   const [naeringsFilter, setNaeringsFilter] = useState("");
   const [bedrifter, setBedrifter] = useState<BrregRow[]>([]);
@@ -50,10 +62,30 @@ export default function LagKampanjeNyPage() {
   const findSponsors = trpc.lag.findSponsors.useMutation();
   const submitOutreach = trpc.lag.submitCampaignOutreach.useMutation();
 
+  const isGolf = campaignType === "golfballer_logo";
+
+  const dozensNum = useMemo(() => {
+    const n = Number(dozensStr.replace(",", ".").replace(/\s/g, ""));
+    return Number.isFinite(n) ? Math.floor(n) : 0;
+  }, [dozensStr]);
+
+  const golfAmountKr = useMemo(() => {
+    if (dozensNum < 6) return 0;
+    return dozensNum * PRICE_VICE_DRIVE_PER_DUSIN_KR;
+  }, [dozensNum]);
+
   const selectedList = useMemo(
     () => Object.values(selected),
     [selected]
   );
+
+  function onCampaignTypeChange(next: CampaignTypeValue) {
+    setCampaignType(next);
+    if (next === "golfballer_logo") {
+      setExposureDescription(GOLF_EXPOSURE_DEFAULT);
+      setDozensStr((d) => (Number(d) >= 6 ? d : "6"));
+    }
+  }
 
   function toggleSelect(row: BrregRow) {
     setSelected((prev) => {
@@ -71,6 +103,30 @@ export default function LagKampanjeNyPage() {
   async function handleStep1Next(e: React.FormEvent) {
     e.preventDefault();
     setFormError(null);
+
+    if (isGolf) {
+      if (dozensNum < 6) {
+        setFormError("Velg minst 6 dusin golfballer.");
+        return;
+      }
+      try {
+        const { campaignId: id } = await createDraft.mutateAsync({
+          title: title.trim(),
+          campaignType: "golfballer_logo",
+          quantityDusin: dozensNum,
+          exposureDescription: exposureDescription.trim(),
+          eventDate: eventDate.trim() || null,
+        });
+        setCampaignId(id);
+        setStep(2);
+      } catch (err) {
+        setFormError(
+          err instanceof Error ? err.message : "Kunne ikke opprette utkast."
+        );
+      }
+      return;
+    }
+
     const kr = Number(amountKr.replace(",", ".").replace(/\s/g, ""));
     if (!Number.isFinite(kr) || kr <= 0) {
       setFormError("Oppgi et gyldig beløp i kroner.");
@@ -221,9 +277,7 @@ export default function LagKampanjeNyPage() {
                   required
                   value={campaignType}
                   onChange={(e) =>
-                    setCampaignType(
-                      e.target.value as (typeof CAMPAIGN_TYPES)[number]["value"]
-                    )
+                    onCampaignTypeChange(e.target.value as CampaignTypeValue)
                   }
                   className="border-input flex h-10 w-full rounded-md border bg-background px-3 text-sm"
                 >
@@ -234,18 +288,53 @@ export default function LagKampanjeNyPage() {
                   ))}
                 </select>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="amount">Beløp søkt (kr)</Label>
-                <Input
-                  id="amount"
-                  required
-                  inputMode="decimal"
-                  value={amountKr}
-                  onChange={(e) => setAmountKr(e.target.value)}
-                  placeholder="25000"
-                  className="border-[var(--brand-pine)]/15"
-                />
-              </div>
+
+              {isGolf ? (
+                <div className="space-y-2">
+                  <Label htmlFor="dusin">Antall dusin</Label>
+                  <Input
+                    id="dusin"
+                    required
+                    inputMode="numeric"
+                    value={dozensStr}
+                    onChange={(e) =>
+                      setDozensStr(e.target.value.replace(/[^\d.,]/g, ""))
+                    }
+                    className="border-[var(--brand-pine)]/15"
+                  />
+                  <p className="text-xs text-neutral-500">
+                    Minimum 6 dusin. Pris: {PRICE_VICE_DRIVE_PER_DUSIN_KR} kr per
+                    dusin (Vice Drive), beregnet automatisk.
+                  </p>
+                </div>
+              ) : null}
+
+              {isGolf ? (
+                <div className="rounded-lg border border-[var(--brand-pine)]/15 bg-neutral-50 px-3 py-2 text-sm">
+                  <p className="font-medium text-[var(--brand-pine)]">
+                    Beløp søkt (beregnet)
+                  </p>
+                  <p className="tabular-nums text-neutral-800">
+                    {dozensNum < 6
+                      ? "— (oppgi minst 6 dusin)"
+                      : `${golfAmountKr.toLocaleString("nb-NO")} kr (${dozensNum} dusin × ${PRICE_VICE_DRIVE_PER_DUSIN_KR} kr)`}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Beløp søkt (kr)</Label>
+                  <Input
+                    id="amount"
+                    required
+                    inputMode="decimal"
+                    value={amountKr}
+                    onChange={(e) => setAmountKr(e.target.value)}
+                    placeholder="25000"
+                    className="border-[var(--brand-pine)]/15"
+                  />
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="event">Dato for arrangement</Label>
                 <Input
@@ -262,10 +351,14 @@ export default function LagKampanjeNyPage() {
                   id="expo"
                   required
                   maxLength={4000}
-                  rows={5}
+                  rows={campaignType === "annet_pengestotte" ? 6 : 5}
                   value={exposureDescription}
                   onChange={(e) => setExposureDescription(e.target.value)}
-                  placeholder="Eksponering på drakter, banner, sosiale medier …"
+                  placeholder={
+                    campaignType === "annet_pengestotte"
+                      ? "Beskriv behovet og hva sponsor kan få igjen (åpent felt)."
+                      : "Eksponering, synlighet, profilering …"
+                  }
                   className="border-[var(--brand-pine)]/15"
                 />
               </div>
