@@ -63,6 +63,8 @@ const btnGold =
   "inline-flex h-12 items-center justify-center gap-2 rounded-lg bg-[#FFBE4A] px-6 text-sm font-semibold text-[#0A2E1A] shadow-lg shadow-black/20 transition hover:brightness-105 sm:min-w-[220px]";
 const btnOutlineHero =
   "inline-flex h-12 items-center justify-center rounded-lg border border-white/25 bg-white/5 px-6 text-sm font-semibold text-white backdrop-blur-sm transition hover:bg-white/10 sm:min-w-[200px]";
+const btnOutline =
+  "inline-flex h-12 items-center justify-center rounded-lg border border-[#0A2E1A]/20 bg-white px-6 text-sm font-semibold text-[#0A2E1A] transition hover:bg-[#0A2E1A]/5";
 
 export default function Home() {
   return (
@@ -163,6 +165,88 @@ export default function Home() {
             );
           })}
         </ol>
+      </section>
+
+      {/* ——— To måter å bestille på ——— */}
+      <section
+        className="mx-auto max-w-6xl px-4 pb-4 sm:px-6 lg:pb-8"
+        aria-labelledby="order-ways-heading"
+      >
+        <h2
+          id="order-ways-heading"
+          className="font-heading text-2xl font-semibold tracking-tight text-[#0A2E1A] sm:text-3xl"
+        >
+          To måter å bestille på
+        </h2>
+        <div className="mt-8 grid gap-4 lg:grid-cols-2">
+          <Card className="border-[#0A2E1A]/10 bg-white shadow-sm">
+            <CardContent className="flex h-full flex-col gap-5 p-6 sm:p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#0A2E1A] text-xl text-[#FFBE4A]">
+                  ⛳
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-heading text-xl font-semibold text-[#0A2E1A]">
+                    Sponsor en golfklubb
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                    Vi finner en lokal golfklubb som trenger sponsor. Du betaler
+                    for ballene – klubben bruker dem i turneringer med ditt
+                    logo.
+                  </p>
+                </div>
+              </div>
+
+              <ul className="space-y-2 text-sm text-neutral-700">
+                <li>✓ God lokal synlighet</li>
+                <li>✓ Vi ordner alt</li>
+                <li>✓ Klubben er takknemlig</li>
+              </ul>
+
+              <div className="mt-auto">
+                <Link
+                  href="/registrer?type=bedrift"
+                  className={cn(btnGold, "w-full sm:w-auto")}
+                >
+                  Bli sponsor →
+                  <ArrowRight className="size-4 shrink-0" aria-hidden />
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-[#0A2E1A]/10 bg-white shadow-sm">
+            <CardContent className="flex h-full flex-col gap-5 p-6 sm:p-8">
+              <div className="flex items-start gap-4">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#0A2E1A] text-xl text-[#FFBE4A]">
+                  🏢
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-heading text-xl font-semibold text-[#0A2E1A]">
+                    Bestill direkte
+                  </h3>
+                  <p className="mt-2 text-sm leading-relaxed text-neutral-600">
+                    Vil du ha golfballer med firmaets logo til egne events,
+                    kundepleie eller ansattgaver? Bestill direkte – ingen
+                    mellomledd.
+                  </p>
+                </div>
+              </div>
+
+              <ul className="space-y-2 text-sm text-neutral-700">
+                <li>✓ Leveres direkte til deg</li>
+                <li>✓ Samme lave priser</li>
+                <li>✓ Minimum 6 dusin</li>
+              </ul>
+
+              <div className="mt-auto">
+                <Link href="/bestill" className={cn(btnOutline, "w-full sm:w-auto")}>
+                  Bestill nå →
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </section>
 
       {/* ——— Produktet ——— */}

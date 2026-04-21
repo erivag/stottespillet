@@ -211,15 +211,24 @@ export const orders = pgTable(
   "orders",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    organizationId: uuid("organization_id")
-      .notNull()
-      .references(() => organizations.id, { onDelete: "cascade" }),
+    organizationId: uuid("organization_id").references(() => organizations.id, {
+      onDelete: "cascade",
+    }),
     matchId: uuid("match_id").references(() => matches.id, {
       onDelete: "set null",
     }),
     productId: uuid("product_id").references(() => products.id, {
       onDelete: "set null",
     }),
+    /** Filled when order is placed directly by a business (no club account involved). */
+    directCompanyName: text("direct_company_name"),
+    directContactName: text("direct_contact_name"),
+    directEmail: text("direct_email"),
+    directPhone: text("direct_phone"),
+    directBallName: text("direct_ball_name"),
+    directDozens: integer("direct_dozens"),
+    directImprintText: text("direct_imprint_text"),
+    directComment: text("direct_comment"),
     quantity: integer("quantity").notNull().default(1),
     unitPriceOre: integer("unit_price_ore").notNull().default(0),
     logoStoragePath: text("logo_storage_path"),
