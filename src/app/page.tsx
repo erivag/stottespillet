@@ -372,6 +372,10 @@ export default function Home() {
             <p className="mt-1 text-sm text-neutral-600">
               Sponsorplattform for idrett, komiteer og barnehager.
             </p>
+            <p className="mt-3 text-xs text-neutral-500">
+              © 2025 Støttespillet · Driftet av UTEbygg AS i samarbeid med Bodø
+              Golfsenter AS
+            </p>
           </div>
           <nav
             className="flex flex-col gap-2 text-sm sm:items-end"
