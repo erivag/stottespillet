@@ -832,10 +832,10 @@ export const lagRouter = router({
       }
 
       const industry = input.industries?.find((s) => s.trim().length > 0);
-      const { rawEnheter } = await searchBrreg({
+      const { rawEnheter, totalRegistryHits } = await searchBrreg({
         postalCode: postal,
         industry: industry?.trim(),
-        size: 50,
+        size: 100,
         page: 0,
       });
 
@@ -847,14 +847,13 @@ export const lagRouter = router({
 
       const {
         companies: bedrifter,
-        totalFetched,
         totalAfterFilter,
         displayed,
-      } = filterSortAndLimitSponsorCompanies(rawEnheter, 20);
+      } = filterSortAndLimitSponsorCompanies(rawEnheter, 30);
 
       return {
         bedrifter,
-        totalFetched,
+        totalFetched: totalRegistryHits,
         totalAfterFilter,
         displayed,
       };

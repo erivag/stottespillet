@@ -51,53 +51,26 @@ type BrregEnhet = {
 
 type BrregEnheterResponse = {
   _embedded?: { enheter?: BrregEnhet[] };
+  page?: {
+    totalElements?: number;
+    totalPages?: number;
+    size?: number;
+    number?: number;
+  };
 };
 
 function pickAddress(e: BrregEnhet): BrregAdresse | undefined {
   return e.forretningsadresse ?? e.postadresse;
 }
 
-/** Org.forms we skip (foreninger, samvirke, kommuner, etc.). */
-const EXCLUDED_ORGANISASJONSFORM_KODER = new Set([
-  "FLI",
-  "SA",
-  "BA",
-  "STI",
-  "KF",
-  "KBO", // konkursbo
-]);
-
-function enhetHasStreetAddress(e: BrregEnhet): boolean {
-  const addr = pickAddress(e);
-  const lines = addr?.adresse;
-  return (
-    Array.isArray(lines) &&
-    lines.some((l) => typeof l === "string" && l.trim().length > 0)
-  );
-}
-
-function enhetHasPositiveEmployees(e: BrregEnhet): boolean {
-  return (
-    e.harRegistrertAntallAnsatte === true &&
-    typeof e.antallAnsatte === "number" &&
-    e.antallAnsatte > 0
-  );
-}
-
-function passesBrregSponsorFilters(e: BrregEnhet): boolean {
-  const kode = e.organisasjonsform?.kode?.trim().toUpperCase();
-  if (kode && EXCLUDED_ORGANISASJONSFORM_KODER.has(kode)) {
-    return false;
-  }
-  if (e.konkurs === true) return false;
+/** Slapp filtrering: kun åpenbare støy-rader fjernes. */
+function passesBasicSponsorFilters(e: BrregEnhet): boolean {
+  const navn = (e.navn ?? "").trim();
+  if (!navn) return false;
+  if (navn.toUpperCase().includes("KONKURSBO")) return false;
   if (e.slettedato != null && String(e.slettedato).trim().length > 0) {
     return false;
   }
-  if (e.underTvangsavviklingEllerTvangsopplosning === true) {
-    return false;
-  }
-  if (!enhetHasStreetAddress(e)) return false;
-  if (!enhetHasPositiveEmployees(e)) return false;
   return true;
 }
 
@@ -150,8 +123,13 @@ export async function getKommuneNrFromPostalCode(
  */
 export async function searchBrreg(
   params: BrregSearchParams
-): Promise<{ companies: BrregCompany[]; rawEnheter: BrregEnhet[] }> {
-  const size = params.size ?? 20;
+): Promise<{
+  companies: BrregCompany[];
+  rawEnheter: BrregEnhet[];
+  /** Totalt antall treff i registeret (fra API), ellers antall rader i svaret. */
+  totalRegistryHits: number;
+}> {
+  const size = params.size ?? 100;
   const page = params.page ?? 0;
   const kommuneNr =
     params.kommuneNr?.trim() ||
@@ -160,7 +138,7 @@ export async function searchBrreg(
       : null);
 
   if (!kommuneNr) {
-    return { companies: [], rawEnheter: [] };
+    return { companies: [], rawEnheter: [], totalRegistryHits: 0 };
   }
 
   const url = new URL("https://data.brreg.no/enhetsregisteret/api/enheter");
@@ -179,35 +157,39 @@ export async function searchBrreg(
 
   const data = (await res.json()) as BrregEnheterResponse;
   const raw = data._embedded?.enheter ?? [];
+  const totalRegistryHits =
+    typeof data.page?.totalElements === "number"
+      ? data.page.totalElements
+      : raw.length;
   const companies = raw
     .map(mapEnhet)
     .filter((c): c is BrregCompany => c != null);
 
-  return { companies, rawEnheter: raw };
+  return { companies, rawEnheter: raw, totalRegistryHits };
 }
 
-const SPONSOR_LIST_LIMIT = 20;
+const SPONSOR_LIST_LIMIT = 30;
 
 export type BrregSponsorFilterResult = {
   companies: BrregCompany[];
-  /** Rows returned from Brønnøysund for this page (typically up to 50). */
+  /** Rader i denne siden fra API (typisk opptil `size`). */
   totalFetched: number;
-  /** Rows left after business rules (address, employees, org.form, etc.). */
+  /** Rader igjen etter enkle filtre (navn, konkursbo, slettet). */
   totalAfterFilter: number;
-  /** Rows returned to the client (capped). */
+  /** Rader returnert til klient (topp etter sortering, cap). */
   displayed: number;
 };
 
 /**
- * Filters Brønnøysund rows for sponsor matching, sorts by quality, returns top N.
- * Sort: 1) has e-mail, 2) employee count desc, 3) name A–Å.
+ * Filtrerer bort åpenbart uaktuelle rader, sorterer kvalitet, returnerer topp N.
+ * Sortering: 1) har e-post, 2) flest ansatte, 3) navn A–Å.
  */
 export function filterSortAndLimitSponsorCompanies(
   rawEnheter: BrregEnhet[],
   limit: number = SPONSOR_LIST_LIMIT
 ): BrregSponsorFilterResult {
   const totalFetched = rawEnheter.length;
-  const filteredRaw = rawEnheter.filter(passesBrregSponsorFilters);
+  const filteredRaw = rawEnheter.filter(passesBasicSponsorFilters);
   const mapped = filteredRaw
     .map(mapEnhet)
     .filter((c): c is BrregCompany => c != null);

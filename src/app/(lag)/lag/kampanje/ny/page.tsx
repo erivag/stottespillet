@@ -62,7 +62,6 @@ export default function LagKampanjeNyPage() {
   const [bedrifter, setBedrifter] = useState<BrregRow[]>([]);
   const [brregSearchStats, setBrregSearchStats] = useState<{
     totalFetched: number;
-    totalAfterFilter: number;
     displayed: number;
   } | null>(null);
   const [selected, setSelected] = useState<Record<string, BrregRow>>({});
@@ -215,7 +214,6 @@ export default function LagKampanjeNyPage() {
       setBedrifter(res.bedrifter);
       setBrregSearchStats({
         totalFetched: res.totalFetched,
-        totalAfterFilter: res.totalAfterFilter,
         displayed: res.displayed,
       });
       setSelected({});
@@ -581,15 +579,11 @@ export default function LagKampanjeNyPage() {
                 <span className="font-medium text-[var(--brand-pine)]">
                   {brregSearchStats.totalFetched}
                 </span>{" "}
-                treff fra Brønnøysund. Etter filtrering:{" "}
-                <span className="font-medium text-[var(--brand-pine)]">
-                  {brregSearchStats.totalAfterFilter}
-                </span>{" "}
-                bedrifter. Viser de{" "}
+                treff · viser{" "}
                 <span className="font-medium text-[var(--brand-pine)]">
                   {brregSearchStats.displayed}
                 </span>{" "}
-                beste (sortert etter e-post, antall ansatte og navn).
+                bedrifter
               </p>
             ) : null}
 
