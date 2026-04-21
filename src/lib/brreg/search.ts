@@ -35,6 +35,7 @@ type BrregEnhet = {
   organisasjonsnummer?: string;
   navn?: string;
   naeringskode1?: { beskrivelse?: string };
+  organisasjonsform?: { kode?: string; beskrivelse?: string };
   forretningsadresse?: BrregAdresse;
   postadresse?: BrregAdresse;
   epostadresse?: string;
@@ -43,6 +44,9 @@ type BrregEnhet = {
   hjemmeside?: string;
   antallAnsatte?: number;
   harRegistrertAntallAnsatte?: boolean;
+  konkurs?: boolean;
+  slettedato?: string;
+  underTvangsavviklingEllerTvangsopplosning?: boolean;
 };
 
 type BrregEnheterResponse = {
@@ -51,6 +55,50 @@ type BrregEnheterResponse = {
 
 function pickAddress(e: BrregEnhet): BrregAdresse | undefined {
   return e.forretningsadresse ?? e.postadresse;
+}
+
+/** Org.forms we skip (foreninger, samvirke, kommuner, etc.). */
+const EXCLUDED_ORGANISASJONSFORM_KODER = new Set([
+  "FLI",
+  "SA",
+  "BA",
+  "STI",
+  "KF",
+  "KBO", // konkursbo
+]);
+
+function enhetHasStreetAddress(e: BrregEnhet): boolean {
+  const addr = pickAddress(e);
+  const lines = addr?.adresse;
+  return (
+    Array.isArray(lines) &&
+    lines.some((l) => typeof l === "string" && l.trim().length > 0)
+  );
+}
+
+function enhetHasPositiveEmployees(e: BrregEnhet): boolean {
+  return (
+    e.harRegistrertAntallAnsatte === true &&
+    typeof e.antallAnsatte === "number" &&
+    e.antallAnsatte > 0
+  );
+}
+
+function passesBrregSponsorFilters(e: BrregEnhet): boolean {
+  const kode = e.organisasjonsform?.kode?.trim().toUpperCase();
+  if (kode && EXCLUDED_ORGANISASJONSFORM_KODER.has(kode)) {
+    return false;
+  }
+  if (e.konkurs === true) return false;
+  if (e.slettedato != null && String(e.slettedato).trim().length > 0) {
+    return false;
+  }
+  if (e.underTvangsavviklingEllerTvangsopplosning === true) {
+    return false;
+  }
+  if (!enhetHasStreetAddress(e)) return false;
+  if (!enhetHasPositiveEmployees(e)) return false;
+  return true;
 }
 
 function mapEnhet(e: BrregEnhet): BrregCompany | null {
@@ -136,4 +184,47 @@ export async function searchBrreg(
     .filter((c): c is BrregCompany => c != null);
 
   return { companies, rawEnheter: raw };
+}
+
+const SPONSOR_LIST_LIMIT = 20;
+
+export type BrregSponsorFilterResult = {
+  companies: BrregCompany[];
+  /** Rows returned from Brønnøysund for this page (typically up to 50). */
+  totalFetched: number;
+  /** Rows left after business rules (address, employees, org.form, etc.). */
+  totalAfterFilter: number;
+  /** Rows returned to the client (capped). */
+  displayed: number;
+};
+
+/**
+ * Filters Brønnøysund rows for sponsor matching, sorts by quality, returns top N.
+ * Sort: 1) has e-mail, 2) employee count desc, 3) name A–Å.
+ */
+export function filterSortAndLimitSponsorCompanies(
+  rawEnheter: BrregEnhet[],
+  limit: number = SPONSOR_LIST_LIMIT
+): BrregSponsorFilterResult {
+  const totalFetched = rawEnheter.length;
+  const filteredRaw = rawEnheter.filter(passesBrregSponsorFilters);
+  const mapped = filteredRaw
+    .map(mapEnhet)
+    .filter((c): c is BrregCompany => c != null);
+
+  mapped.sort((a, b) => {
+    const ae = a.email != null && a.email.trim().length > 0 ? 1 : 0;
+    const be = b.email != null && b.email.trim().length > 0 ? 1 : 0;
+    if (be !== ae) return be - ae;
+    if (b.employees !== a.employees) return b.employees - a.employees;
+    return a.name.localeCompare(b.name, "nb", { sensitivity: "base" });
+  });
+
+  const companies = mapped.slice(0, limit);
+  return {
+    companies,
+    totalFetched,
+    totalAfterFilter: mapped.length,
+    displayed: companies.length,
+  };
 }

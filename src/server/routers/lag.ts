@@ -5,7 +5,11 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { SPLEIS_TYPES } from "@/lib/catalog/spleis-types";
-import { searchBrreg } from "@/lib/brreg/search";
+import {
+  filterSortAndLimitSponsorCompanies,
+  searchBrreg,
+} from "@/lib/brreg/search";
+import { loadSponsorLandingByToken } from "@/lib/sponsor/load-sponsor-landing";
 import { EMPTY_LAG_DASHBOARD } from "@/lib/dashboard-fallbacks";
 import { db } from "@/lib/db";
 import {
@@ -90,6 +94,11 @@ async function upsertBrregCacheRow(
 }
 
 export const lagRouter = router({
+  /** Public sponsor pitch page (no auth). */
+  getSponsorLanding: publicProcedure
+    .input(z.object({ token: z.string().min(16).max(128) }))
+    .query(async ({ input }) => loadSponsorLandingByToken(input.token)),
+
   dashboard: protectedProcedure.query(async ({ ctx }) => {
     const userId = ctx.user.id;
 
@@ -301,6 +310,7 @@ export const lagRouter = router({
           status: string;
           amountOre: number;
           campaignType: string;
+          sponsorShareToken: string | null;
           updatedAt: string;
         }[],
       };
@@ -314,7 +324,17 @@ export const lagRouter = router({
       .limit(1);
 
     if (!org) {
-      return { items: [] as { id: string; title: string; status: string; amountOre: number; campaignType: string; updatedAt: string }[] };
+      return {
+        items: [] as {
+          id: string;
+          title: string;
+          status: string;
+          amountOre: number;
+          campaignType: string;
+          sponsorShareToken: string | null;
+          updatedAt: string;
+        }[],
+      };
     }
 
     const rows = await db
@@ -324,6 +344,7 @@ export const lagRouter = router({
         status: campaigns.status,
         amountOre: campaigns.amountOre,
         campaignType: campaigns.campaignType,
+        sponsorShareToken: campaigns.sponsorShareToken,
         updatedAt: campaigns.updatedAt,
       })
       .from(campaigns)
@@ -678,6 +699,8 @@ export const lagRouter = router({
           ? new Date(eventRaw).toISOString()
           : null;
 
+      const sponsorShareToken = randomBytes(18).toString("hex");
+
       const [row] = await db
         .insert(campaigns)
         .values({
@@ -689,6 +712,7 @@ export const lagRouter = router({
           eventDate,
           quantity,
           exposureDescription: input.exposureDescription.trim(),
+          sponsorShareToken,
           status: "draft",
           createdAt: now,
           updatedAt: now,
@@ -710,7 +734,6 @@ export const lagRouter = router({
       z.object({
         campaignId: z.string().uuid(),
         industries: z.array(z.string()).optional(),
-        maxResults: z.number().int().min(1).max(100).default(20),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -733,10 +756,10 @@ export const lagRouter = router({
       }
 
       const industry = input.industries?.find((s) => s.trim().length > 0);
-      const { companies, rawEnheter } = await searchBrreg({
+      const { rawEnheter } = await searchBrreg({
         postalCode: postal,
         industry: industry?.trim(),
-        size: input.maxResults,
+        size: 50,
         page: 0,
       });
 
@@ -746,7 +769,19 @@ export const lagRouter = router({
         await upsertBrregCacheRow(nr, raw as Record<string, unknown>);
       }
 
-      return { bedrifter: companies, total: companies.length };
+      const {
+        companies: bedrifter,
+        totalFetched,
+        totalAfterFilter,
+        displayed,
+      } = filterSortAndLimitSponsorCompanies(rawEnheter, 20);
+
+      return {
+        bedrifter,
+        totalFetched,
+        totalAfterFilter,
+        displayed,
+      };
     }),
 
   submitCampaignOutreach: protectedProcedure

@@ -55,6 +55,11 @@ export default function LagKampanjeNyPage() {
 
   const [naeringsFilter, setNaeringsFilter] = useState("");
   const [bedrifter, setBedrifter] = useState<BrregRow[]>([]);
+  const [brregSearchStats, setBrregSearchStats] = useState<{
+    totalFetched: number;
+    totalAfterFilter: number;
+    displayed: number;
+  } | null>(null);
   const [selected, setSelected] = useState<Record<string, BrregRow>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -152,15 +157,20 @@ export default function LagKampanjeNyPage() {
   async function handleSearchSponsors() {
     if (!campaignId) return;
     setFormError(null);
+    setBrregSearchStats(null);
     try {
       const res = await findSponsors.mutateAsync({
         campaignId,
         industries: naeringsFilter.trim()
           ? [naeringsFilter.trim()]
           : undefined,
-        maxResults: 20,
       });
       setBedrifter(res.bedrifter);
+      setBrregSearchStats({
+        totalFetched: res.totalFetched,
+        totalAfterFilter: res.totalAfterFilter,
+        displayed: res.displayed,
+      });
       setSelected({});
       if (res.bedrifter.length === 0) {
         setFormError(
@@ -431,6 +441,23 @@ export default function LagKampanjeNyPage() {
                 Tilbake
               </button>
             </div>
+
+            {brregSearchStats ? (
+              <p className="text-sm text-neutral-600">
+                <span className="font-medium text-[var(--brand-pine)]">
+                  {brregSearchStats.totalFetched}
+                </span>{" "}
+                treff fra Brønnøysund. Etter filtrering:{" "}
+                <span className="font-medium text-[var(--brand-pine)]">
+                  {brregSearchStats.totalAfterFilter}
+                </span>{" "}
+                bedrifter. Viser de{" "}
+                <span className="font-medium text-[var(--brand-pine)]">
+                  {brregSearchStats.displayed}
+                </span>{" "}
+                beste (sortert etter e-post, antall ansatte og navn).
+              </p>
+            ) : null}
 
             {bedrifter.length > 0 ? (
               <ul className="mt-4 flex flex-col gap-3">

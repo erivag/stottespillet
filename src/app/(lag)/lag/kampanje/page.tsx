@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo, useState } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -25,6 +26,72 @@ const dtf = new Intl.DateTimeFormat("nb-NO", {
   dateStyle: "medium",
   timeStyle: "short",
 });
+
+function sponsorPageUrl(token: string): string {
+  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim().replace(/\/+$/, "");
+  const origin =
+    fromEnv && fromEnv.length > 0
+      ? fromEnv
+      : typeof window !== "undefined"
+        ? window.location.origin
+        : "";
+  return `${origin}/sponsor/${token}`;
+}
+
+function SponsorShareRow({ token }: { token: string | null }) {
+  const [copied, setCopied] = useState(false);
+  const url = useMemo(
+    () => (token ? sponsorPageUrl(token) : ""),
+    [token]
+  );
+
+  if (!token) {
+    return (
+      <p className="text-xs text-neutral-500">
+        Sponsorlenke mangler — kjør database-migrasjon eller kontakt support.
+      </p>
+    );
+  }
+
+  const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-[var(--brand-pine)]/10 pt-3 sm:flex-row sm:flex-wrap sm:items-center">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-[var(--brand-pine)]/25"
+        onClick={() => window.open(fbUrl, "_blank", "noopener,noreferrer")}
+      >
+        Del på Facebook
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="border-[var(--brand-pine)]/25"
+        onClick={async () => {
+          try {
+            await navigator.clipboard.writeText(url);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          } catch {
+            setCopied(false);
+          }
+        }}
+      >
+        {copied ? "Lenke kopiert!" : "Kopier lenke"}
+      </Button>
+      <p className="w-full text-xs text-neutral-500 sm:order-last sm:w-full">
+        Offentlig side for sponsorer:{" "}
+        <span className="break-all font-mono text-[11px] text-neutral-600">
+          {url}
+        </span>
+      </p>
+    </div>
+  );
+}
 
 function campaignStatusNb(s: string): string {
   switch (s) {
@@ -126,13 +193,16 @@ export default function LagKampanjePage() {
                     </span>
                   </div>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-1 text-sm text-neutral-600 sm:flex-row sm:justify-between">
-                  <span className="font-medium tabular-nums text-[var(--brand-pine)]">
-                    {nok.format(c.amountOre / 100)}
-                  </span>
-                  <span className="tabular-nums text-neutral-500">
-                    Oppdatert {dtf.format(new Date(c.updatedAt))}
-                  </span>
+                <CardContent className="flex flex-col gap-3 text-sm text-neutral-600">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
+                    <span className="font-medium tabular-nums text-[var(--brand-pine)]">
+                      {nok.format(c.amountOre / 100)}
+                    </span>
+                    <span className="tabular-nums text-neutral-500">
+                      Oppdatert {dtf.format(new Date(c.updatedAt))}
+                    </span>
+                  </div>
+                  <SponsorShareRow token={c.sponsorShareToken} />
                 </CardContent>
               </Card>
             </li>

@@ -81,6 +81,8 @@ export const campaigns = pgTable(
     eventDate: timestamp("event_date", { withTimezone: true, mode: "string" }),
     quantity: integer("quantity"),
     exposureDescription: text("exposure_description"),
+    /** Public read-only sponsor landing page (`/sponsor/[token]`). */
+    sponsorShareToken: text("sponsor_share_token"),
     status: campaignStatusEnum("status").notNull().default("draft"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
       .defaultNow()
@@ -92,6 +94,7 @@ export const campaigns = pgTable(
   (t) => [
     index("campaigns_organization_id_idx").on(t.organizationId),
     index("campaigns_status_idx").on(t.status),
+    uniqueIndex("campaigns_sponsor_share_token_uidx").on(t.sponsorShareToken),
   ]
 );
 
