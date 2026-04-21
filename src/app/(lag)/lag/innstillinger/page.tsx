@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  Component,
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +19,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/react";
 
 const ORG_TYPES = [
@@ -25,13 +30,72 @@ const ORG_TYPES = [
   { value: "annet", label: "Annet" },
 ] as const;
 
-export default function LagInnstillingerPage() {
+class InnstillingerErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean; message?: string }
+> {
+  state = { hasError: false as boolean, message: undefined as string | undefined };
+
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      hasError: true,
+      message: error instanceof Error ? error.message : "Ukjent feil",
+    };
+  }
+
+  componentDidCatch(error: unknown, info: { componentStack?: string }) {
+    console.error("[lag/innstillinger] render error", error, info);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="mx-auto max-w-lg space-y-4 py-6">
+          <Card className="border-destructive/30 bg-white">
+            <CardHeader>
+              <CardTitle className="text-destructive text-base">
+                Noe gikk galt
+              </CardTitle>
+              <CardDescription className="text-neutral-700">
+                {this.state.message ??
+                  "Siden kunne ikke vises. Prøv å laste på nytt."}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button
+                type="button"
+                className="bg-[var(--brand-pine)] text-white hover:bg-[var(--brand-pine-light)]"
+                onClick={() => window.location.reload()}
+              >
+                Last siden på nytt
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function LagInnstillingerInner() {
   const router = useRouter();
   const utils = trpc.useUtils();
   const [showProfileHint, setShowProfileHint] = useState(false);
-  const { data, isLoading, isError } = trpc.lag.organizationSettings.useQuery();
+  const [submitCaughtError, setSubmitCaughtError] = useState<string | null>(
+    null
+  );
+
+  const { data, isLoading, isError, isFetching } =
+    trpc.lag.organizationSettings.useQuery(undefined, {
+      retry: 1,
+      throwOnError: false,
+      refetchOnWindowFocus: true,
+    });
+
   const updateOrg = trpc.lag.updateOrganization.useMutation({
     onSuccess: async () => {
+      setSubmitCaughtError(null);
       await utils.lag.organizationSettings.invalidate();
       await utils.lag.dashboard.invalidate();
       router.push("/lag/dashboard");
@@ -41,7 +105,7 @@ export default function LagInnstillingerPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [municipality, setMunicipality] = useState("");
-  const [segment, setSegment] = useState("");
+  const [orgType, setOrgType] = useState("");
   const [contactName, setContactName] = useState("");
   const [phone, setPhone] = useState("");
 
@@ -56,49 +120,47 @@ export default function LagInnstillingerPage() {
 
   useEffect(() => {
     if (!data) return;
-    setEmail(data.email);
-    if (data.organization) {
-      setName(data.organization.name);
-      setMunicipality(data.organization.municipality ?? "");
-      setSegment(data.organization.segment ?? "");
-      setContactName(data.organization.contactName ?? "");
-      setPhone(data.organization.phone ?? "");
-    } else {
-      setName("");
-      setMunicipality("");
-      setSegment("");
-      setContactName("");
-      setPhone("");
+    try {
+      setEmail(data.email);
+      if (data.organization) {
+        setName(data.organization.name);
+        setMunicipality(data.organization.municipality ?? "");
+        setOrgType(data.organization.type ?? "");
+        setContactName(data.organization.contactName ?? "");
+        setPhone(data.organization.phone ?? "");
+      } else {
+        setName("");
+        setMunicipality("");
+        setOrgType("");
+        setContactName("");
+        setPhone("");
+      }
+    } catch (err) {
+      console.error("[lag/innstillinger] apply settings to form", err);
     }
   }, [data]);
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <p className="text-sm text-destructive">
-        Kunne ikke laste innstillinger. Prøv igjen senere.
-      </p>
-    );
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    await updateOrg.mutateAsync({
-      name: name.trim(),
-      segment: segment.trim(),
-      municipality: municipality.trim(),
-      contactName: contactName.trim(),
-      phone: phone.trim() === "" ? null : phone.trim(),
-    });
+    setSubmitCaughtError(null);
+    try {
+      await updateOrg.mutateAsync({
+        name: name.trim(),
+        type: orgType.trim(),
+        municipality: municipality.trim(),
+        contactName: contactName.trim(),
+        phone: phone.trim() === "" ? null : phone.trim(),
+      });
+    } catch (err) {
+      console.error("[lag/innstillinger] lagre profil", err);
+      setSubmitCaughtError(
+        err instanceof Error ? err.message : "Kunne ikke lagre. Prøv igjen."
+      );
+    }
   }
+
+  const showLoadHint = isLoading && data === undefined;
+  const showFetchWarning = isError;
 
   return (
     <div className="mx-auto max-w-lg space-y-6">
@@ -108,6 +170,23 @@ export default function LagInnstillingerPage() {
           role="status"
         >
           Fullfør profilen din for å komme i gang
+        </p>
+      ) : null}
+
+      {showLoadHint ? (
+        <p className="text-sm text-neutral-500" aria-live="polite">
+          Laster tidligere lagring …
+        </p>
+      ) : null}
+
+      {showFetchWarning ? (
+        <p
+          className="rounded-lg border border-amber-200 bg-amber-50/90 px-4 py-3 text-sm text-neutral-800"
+          role="status"
+        >
+          Kunne ikke hente lagret profil fra serveren. Fyll ut skjemaet under
+          og trykk Lagre — data lagres når tilkoblingen fungerer.
+          {isFetching ? " (prøver på nytt …)" : null}
         </p>
       ) : null}
 
@@ -154,6 +233,7 @@ export default function LagInnstillingerPage() {
                 value={email}
                 readOnly
                 disabled
+                placeholder="(hentes ved innlogging)"
                 className="border-[var(--brand-pine)]/10 bg-neutral-50 text-neutral-600"
               />
             </div>
@@ -164,8 +244,8 @@ export default function LagInnstillingerPage() {
               </Label>
               <select
                 id="org-type"
-                value={segment}
-                onChange={(e) => setSegment(e.target.value)}
+                value={orgType}
+                onChange={(e) => setOrgType(e.target.value)}
                 required
                 className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-[var(--brand-gold)]/40 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               >
@@ -228,6 +308,11 @@ export default function LagInnstillingerPage() {
               />
             </div>
 
+            {submitCaughtError ? (
+              <p className="text-sm text-destructive" role="alert">
+                {submitCaughtError}
+              </p>
+            ) : null}
             {updateOrg.error ? (
               <p className="text-sm text-destructive" role="alert">
                 {updateOrg.error.message}
@@ -246,4 +331,28 @@ export default function LagInnstillingerPage() {
       </Card>
     </div>
   );
+}
+
+export default function LagInnstillingerPage() {
+  try {
+    return (
+      <InnstillingerErrorBoundary>
+        <LagInnstillingerInner />
+      </InnstillingerErrorBoundary>
+    );
+  } catch (err) {
+    console.error("[lag/innstillinger] page mount", err);
+    return (
+      <div className="mx-auto max-w-lg p-6 text-sm text-destructive">
+        Kunne ikke åpne siden.{" "}
+        <button
+          type="button"
+          className="underline"
+          onClick={() => window.location.reload()}
+        >
+          Last på nytt
+        </button>
+      </div>
+    );
+  }
 }

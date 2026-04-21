@@ -19,8 +19,8 @@ export const organizations = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     userId: uuid("user_id").notNull().unique(),
     name: text("name").notNull(),
-    /** Fritekst eller kode for segment (golf, 17mai, barnehage, …) */
-    segment: text("segment"),
+    /** Lagtype (golfklubb, idrettslag, 17mai, barnehage, annet, …) */
+    type: text("type"),
     /** Kommune (valgfritt) */
     municipality: text("municipality"),
     contactName: text("contact_name"),

@@ -156,7 +156,7 @@ export default function AdminDashboardPage() {
                         {o.name}
                       </td>
                       <td className="px-4 py-3 text-neutral-600">
-                        {segmentLabel(o.segment)}
+                        {segmentLabel(o.type)}
                       </td>
                       <td className="px-4 py-3 text-neutral-500 tabular-nums">
                         {dtf.format(new Date(o.createdAt))}

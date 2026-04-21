@@ -14,7 +14,7 @@ export type AdminDashboardData = {
   recentOrganizations: {
     id: string;
     name: string;
-    segment: string | null;
+    type: string | null;
     createdAt: string;
   }[];
   recentOrders: {

@@ -80,7 +80,7 @@ export default function AdminLagDetailPage() {
             {o.name}
           </h2>
           <p className="mt-1 text-sm text-neutral-600">
-            Type: {segmentLabel(o.segment)} · Kommune:{" "}
+            Type: {segmentLabel(o.type)} · Kommune:{" "}
             {o.municipality?.trim() ? o.municipality : "—"}
           </p>
           <p className="mt-1 text-xs text-neutral-500">

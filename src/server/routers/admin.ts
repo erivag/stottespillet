@@ -83,7 +83,7 @@ export const adminRouter = router({
       .select({
         id: organizations.id,
         name: organizations.name,
-        segment: organizations.segment,
+        type: organizations.type,
         createdAt: organizations.createdAt,
       })
       .from(organizations)
@@ -146,7 +146,7 @@ export const adminRouter = router({
         conditions.push(ilike(organizations.name, `%${safe}%`));
       }
       if (input.segment && input.segment.length > 0) {
-        conditions.push(eq(organizations.segment, input.segment));
+        conditions.push(eq(organizations.type, input.segment));
       }
 
       const whereClause =
@@ -156,7 +156,7 @@ export const adminRouter = router({
         .select({
           id: organizations.id,
           name: organizations.name,
-          segment: organizations.segment,
+          type: organizations.type,
           municipality: organizations.municipality,
           createdAt: organizations.createdAt,
         })
@@ -210,7 +210,7 @@ export const adminRouter = router({
       const items = orgRows.map((o) => ({
         id: o.id,
         name: o.name,
-        segment: o.segment,
+        type: o.type,
         municipality: o.municipality,
         createdAt: o.createdAt,
         campaignCount: campaignMap.get(o.id) ?? 0,
@@ -287,7 +287,7 @@ export const adminRouter = router({
         organization: {
           id: org.id,
           name: org.name,
-          segment: org.segment,
+          type: org.type,
           municipality: org.municipality,
           createdAt: org.createdAt,
           updatedAt: org.updatedAt,

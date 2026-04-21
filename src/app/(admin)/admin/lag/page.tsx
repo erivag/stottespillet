@@ -150,7 +150,7 @@ export default function AdminLagPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-neutral-600">
-                    {segmentLabel(row.segment)}
+                    {segmentLabel(row.type)}
                   </td>
                   <td className="px-4 py-3 text-neutral-600">
                     {row.municipality?.trim() ? row.municipality : "—"}

@@ -381,40 +381,45 @@ export const lagRouter = router({
   }),
 
   organizationSettings: protectedProcedure.query(async ({ ctx }) => {
-    const [org] = await db
-      .select({
-        name: organizations.name,
-        segment: organizations.segment,
-        municipality: organizations.municipality,
-        contactName: organizations.contactName,
-        phone: organizations.phone,
-      })
-      .from(organizations)
-      .where(eq(organizations.userId, ctx.user.id))
-      .limit(1);
+    try {
+      const [org] = await db
+        .select({
+          name: organizations.name,
+          type: organizations.type,
+          municipality: organizations.municipality,
+          contactName: organizations.contactName,
+          phone: organizations.phone,
+        })
+        .from(organizations)
+        .where(eq(organizations.userId, ctx.user.id))
+        .limit(1);
 
-    return {
-      email: ctx.user.email ?? "",
-      organization: org
-        ? {
-            name: org.name,
-            segment: org.segment,
-            municipality: org.municipality,
-            contactName: org.contactName,
-            phone: org.phone,
-          }
-        : null,
-    };
+      return {
+        email: ctx.user.email ?? "",
+        organization: org
+          ? {
+              name: org.name,
+              type: org.type,
+              municipality: org.municipality,
+              contactName: org.contactName,
+              phone: org.phone,
+            }
+          : null,
+      };
+    } catch (err) {
+      console.error("[lag.organizationSettings] database error", err);
+      return {
+        email: ctx.user.email ?? "",
+        organization: null as null,
+      };
+    }
   }),
 
   updateOrganization: protectedProcedure
     .input(
       z.object({
         name: z.string().min(1, "Lagnavn er påkrevd").max(200),
-        segment: z
-          .string()
-          .min(1, "Velg type")
-          .max(100),
+        type: z.string().min(1, "Velg type").max(100),
         municipality: z
           .string()
           .min(1, "Kommune er påkrevd")
@@ -434,7 +439,7 @@ export const lagRouter = router({
         .where(eq(organizations.userId, ctx.user.id))
         .limit(1);
 
-      const segment = input.segment.trim();
+      const orgType = input.type.trim();
       const municipality = input.municipality.trim();
       const contactName = input.contactName.trim();
       const phoneRaw = input.phone?.trim() ?? "";
@@ -445,7 +450,7 @@ export const lagRouter = router({
           .update(organizations)
           .set({
             name: input.name.trim(),
-            segment,
+            type: orgType,
             municipality,
             contactName,
             phone,
@@ -456,7 +461,7 @@ export const lagRouter = router({
         await db.insert(organizations).values({
           userId: ctx.user.id,
           name: input.name.trim(),
-          segment,
+          type: orgType,
           municipality,
           contactName,
           phone,
